@@ -12,6 +12,10 @@ import {
     FileText,
     Users,
     Fuel,
+    Brain,
+    DollarSign,
+    Shield,
+    Trophy,
 } from 'lucide-react'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import {
@@ -38,14 +42,20 @@ const PIE_COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4
 
 export default function DashboardPage() {
     const [data, setData] = useState<any>(null)
+    const [aiSuggestions, setAiSuggestions] = useState<any[]>([])
+    const [ozet, setOzet] = useState<any>(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        fetch('/api/dashboard')
-            .then((res) => res.json())
-            .then(setData)
-            .catch(console.error)
-            .finally(() => setLoading(false))
+        Promise.all([
+            fetch('/api/dashboard').then(r => r.json()),
+            fetch('/api/ai-oneriler').then(r => r.json()),
+            fetch('/api/ozet').then(r => r.json()),
+        ]).then(([dashData, aiData, ozetData]) => {
+            setData(dashData)
+            setAiSuggestions((aiData.suggestions || []).slice(0, 3))
+            setOzet(ozetData)
+        }).catch(console.error).finally(() => setLoading(false))
     }, [])
 
     if (loading) {
@@ -214,15 +224,55 @@ export default function DashboardPage() {
                 </div>
             </div>
 
-            {/* Hızlı İşlemler */}
-            <div className="card" style={{ padding: '1.25rem' }}>
-                <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, marginBottom: '1rem' }}>⚡ Hızlı İşlemler</h3>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <Link href="/kiralamalar/yeni" className="btn btn-primary btn-sm"><CalendarRange size={15} />Yeni Kiralama</Link>
-                    <Link href="/makineler/yeni" className="btn btn-outline btn-sm"><Plus size={15} />Makine Ekle</Link>
-                    <Link href="/musteriler/yeni" className="btn btn-outline btn-sm"><Users size={15} />Müşteri Ekle</Link>
-                    <Link href="/yakit/yeni" className="btn btn-outline btn-sm"><Fuel size={15} />Yakıt Girişi</Link>
-                    <Link href="/bakim/yeni" className="btn btn-outline btn-sm"><FileText size={15} />Bakım Kaydı</Link>
+            {/* AI Öneriler Mini Widget */}
+            {aiSuggestions.length > 0 && (
+                <div className="card" style={{ padding: '1.25rem', marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
+                        <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Brain size={17} color="#7c3aed" /> AI Öneriler
+                        </h3>
+                        <Link href="/ai-oneriler" style={{ fontSize: '0.75rem', color: '#2563eb', textDecoration: 'none' }}>Tümünü gör →</Link>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {aiSuggestions.map((s: any, i: number) => {
+                            const prColors: Record<string, string> = { YUKSEK: '#dc2626', ORTA: '#d97706', DUSUK: '#2563eb' }
+                            return (
+                                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem', padding: '0.625rem', background: '#f8fafc', borderRadius: '0.5rem', borderLeft: `3px solid ${prColors[s.priority] || '#94a3b8'}` }}>
+                                    <span style={{ fontSize: '1rem', flexShrink: 0 }}>{s.icon}</span>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontSize: '0.8125rem', fontWeight: 600 }}>{s.title}</div>
+                                        <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '0.125rem' }}>{s.description?.slice(0, 80)}...</div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Hızlı İşlemler + Yeni Modüller */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+                <div className="card" style={{ padding: '1.25rem' }}>
+                    <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, marginBottom: '1rem' }}>⚡ Hızlı İşlemler</h3>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <Link href="/kiralamalar/yeni" className="btn btn-primary btn-sm"><CalendarRange size={15} />Yeni Kiralama</Link>
+                        <Link href="/makineler/yeni" className="btn btn-outline btn-sm"><Plus size={15} />Makine Ekle</Link>
+                        <Link href="/musteriler/yeni" className="btn btn-outline btn-sm"><Users size={15} />Müşteri Ekle</Link>
+                        <Link href="/yakit/yeni" className="btn btn-outline btn-sm"><Fuel size={15} />Yakıt Girişi</Link>
+                        <Link href="/bakim/yeni" className="btn btn-outline btn-sm"><FileText size={15} />Bakım Kaydı</Link>
+                        <Link href="/hakedis" className="btn btn-outline btn-sm"><FileText size={15} />Hakediş</Link>
+                    </div>
+                </div>
+                <div className="card" style={{ padding: '1.25rem' }}>
+                    <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, marginBottom: '1rem' }}>🆕 Yeni Modüller</h3>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <Link href="/gelir-gider" className="btn btn-outline btn-sm"><DollarSign size={15} />Gelir & Gider</Link>
+                        <Link href="/belgeler" className="btn btn-outline btn-sm"><Shield size={15} />Belgeler</Link>
+                        <Link href="/bakim-takvimi" className="btn btn-outline btn-sm"><FileText size={15} />Bakım Takvimi</Link>
+                        <Link href="/operatorler/performans" className="btn btn-outline btn-sm"><Trophy size={15} />Op. Performans</Link>
+                        <Link href="/fiyatlama" className="btn btn-outline btn-sm"><TrendingUp size={15} />Fiyatlama</Link>
+                        <Link href="/depolar" className="btn btn-outline btn-sm"><Truck size={15} />Depolar</Link>
+                    </div>
                 </div>
             </div>
         </div>

@@ -8,7 +8,7 @@ import {
     CalendarRange, Fuel, Wrench, ClipboardList, Receipt,
     CreditCard, BarChart3, X, Construction, Settings,
     MapPin, Hexagon, Bell, Shield, FileText, Warehouse,
-    Trophy, TrendingUp, Calendar, DollarSign,
+    Trophy, TrendingUp, Calendar, DollarSign, Brain, Tag,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -56,7 +56,14 @@ const NAV_GROUPS = [
             { href: '/faturalar', label: 'Faturalar', icon: Receipt },
             { href: '/odemeler', label: 'Ödemeler', icon: CreditCard },
             { href: '/gelir-gider', label: 'Gelir & Gider', icon: DollarSign },
+            { href: '/fiyatlama', label: 'Fiyatlama', icon: Tag },
             { href: '/raporlar', label: 'Raporlar', icon: BarChart3 },
+        ],
+    },
+    {
+        label: 'Akıl',
+        items: [
+            { href: '/ai-oneriler', label: 'AI Öneriler', icon: Brain },
         ],
     },
 ]
