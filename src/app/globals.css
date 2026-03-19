@@ -774,3 +774,116 @@ body {
   justify-content: center;
   font-weight: 800;
 }
+
+/* ─── Tablo (card içi) ──────────────────────── */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.table th {
+  text-align: left;
+  padding: 0.625rem 1rem;
+  font-weight: 600;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  background: #f8fafc;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: var(--color-foreground);
+  vertical-align: middle;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover td {
+  background: #fafbfc;
+}
+
+/* ─── Card Header ───────────────────────────── */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.card-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ─── Stat Grid ─────────────────────────────── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.stat-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─── Animate slide up ──────────────────────── */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.25s ease-out;
+}
+
+/* ─── Text helpers ──────────────────────────── */
+.text-muted {
+  color: var(--color-muted);
+}
+
+.danger {
+  color: var(--color-danger);
+}
+
+/* ─── Variables for JS access ───────────────── */
+:root {
+  --text-muted: #64748b;
+  --surface-2: #f8fafc;
+  --danger: #dc2626;
+}
+
+/* ─── Mobile menu button ────────────────────── */
+@media (max-width: 768px) {
+  #mobile-menu-btn {
+    display: flex !important;
+  }
+}

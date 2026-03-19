@@ -149,6 +149,17 @@ model Tenant {
   geofenceBreaches   GeofenceBreach[]
   fuelTheftAlerts    FuelTheftAlert[]
   systemNotifications SystemNotification[]
+  hakedisler         Hakedis[]
+  documents          Document[]
+  maintenanceSchedules MaintenanceSchedule[]
+  pricingRules       PricingRule[]
+  depots             Depot[]
+  machineTransfers   MachineTransfer[]
+  incomeExpenses     IncomeExpense[]
+  machineAmortizations MachineAmortization[]
+  customerRatings    CustomerRating[]
+  customerInteractions CustomerInteraction[]
+  operatorScores     OperatorScore[]
 
   @@map("tenants")
 }
@@ -218,6 +229,10 @@ model Machine {
   geofenceMachines GeofenceMachine[]
   geofenceBreaches GeofenceBreach[]
   fuelTheftAlerts  FuelTheftAlert[]
+  hakedisler       Hakedis[]
+  maintenanceSchedules MaintenanceSchedule[]
+  transfers        MachineTransfer[]
+  amortization     MachineAmortization?
 
   @@map("machines")
 }
@@ -244,6 +259,7 @@ model Operator {
   rentals         Rental[]
   timesheets      Timesheet[]
   engineSessions  EngineSession[]
+  scores          OperatorScore[]
 
   @@map("operators")
 }
@@ -270,6 +286,9 @@ model Customer {
   sites           Site[]
   rentals         Rental[]
   invoices        Invoice[]
+  hakedisler       Hakedis[]
+  rating           CustomerRating?
+  interactions     CustomerInteraction[]
 
   @@map("customers")
 }
@@ -344,6 +363,7 @@ model Rental {
   invoices        Invoice[]
   timesheets      Timesheet[]
   engineSessions  EngineSession[]
+  hakedisler       Hakedis[]
 
   @@map("rentals")
 }
@@ -637,4 +657,284 @@ model SystemNotification {
   tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("system_notifications")
+}
+
+// ─── YENİ MODELLER — MASTER PROMPT FAZ 1+ ────────────────
+
+enum HakedisStatus {
+  TASLAK
+  ONAY_BEKLIYOR
+  ONAYLANDI
+  MUSTERI_ONAY_BEKLIYOR
+  MUSTERI_ONAYLADI
+  FATURALANDI
+  REDDEDILDI
+}
+
+model Hakedis {
+  id              String        @id @default(uuid())
+  tenantId        String        @map("tenant_id")
+  rentalId        String        @map("rental_id")
+  machineId       String        @map("machine_id")
+  customerId      String        @map("customer_id")
+  operatorId      String?       @map("operator_id")
+  periodStart     DateTime      @map("period_start")
+  periodEnd       DateTime      @map("period_end")
+  periodLabel     String        @map("period_label")
+  totalHours      Decimal       @default(0) @map("total_hours") @db.Decimal(10, 1)
+  workingDays     Int           @default(0) @map("working_days")
+  idleHours       Decimal?      @map("idle_hours") @db.Decimal(10, 1)
+  overtimeHours   Decimal?      @map("overtime_hours") @db.Decimal(10, 1)
+  unitPrice       Decimal       @map("unit_price") @db.Decimal(10, 2)
+  periodType      RentalPeriodType @map("period_type")
+  subtotal        Decimal       @default(0) @db.Decimal(10, 2)
+  fuelCost        Decimal?      @map("fuel_cost") @db.Decimal(10, 2)
+  operatorCost    Decimal?      @map("operator_cost") @db.Decimal(10, 2)
+  transportCost   Decimal?      @map("transport_cost") @db.Decimal(10, 2)
+  extraCosts      Json?         @map("extra_costs")
+  discount        Decimal?      @db.Decimal(10, 2)
+  taxRate         Decimal       @default(20) @map("tax_rate") @db.Decimal(5, 2)
+  taxAmount       Decimal       @default(0) @map("tax_amount") @db.Decimal(10, 2)
+  totalAmount     Decimal       @default(0) @map("total_amount") @db.Decimal(10, 2)
+  status          HakedisStatus @default(TASLAK)
+  preparedBy      String?       @map("prepared_by")
+  approvedBy      String?       @map("approved_by")
+  approvedAt      DateTime?     @map("approved_at")
+  sentToCustomerAt DateTime?    @map("sent_to_customer_at")
+  customerApprovedAt DateTime?  @map("customer_approved_at")
+  customerToken   String?       @unique @map("customer_token")
+  photos          String[]
+  gpsReport       Json?         @map("gps_report")
+  operatorSignature String?     @map("operator_signature")
+  customerSignature String?     @map("customer_signature")
+  pdfPath         String?       @map("pdf_path")
+  notes           String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rental          Rental        @relation(fields: [rentalId], references: [id])
+  machine         Machine       @relation(fields: [machineId], references: [id])
+  customer        Customer      @relation(fields: [customerId], references: [id])
+
+  @@map("hakedisler")
+}
+
+model Document {
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  entityType  String   @map("entity_type")  // MACHINE, OPERATOR, CUSTOMER, RENTAL
+  entityId    String   @map("entity_id")
+  type        String   // RUHSAT, SIGORTA, MUAYENE, EHLIYET, OPERATOR_BELGESI, SOZLESME, vb.
+  title       String
+  filePath    String?  @map("file_path")
+  expiryDate  DateTime? @map("expiry_date")
+  alertDays   Int      @default(30) @map("alert_days")
+  isExpired   Boolean  @default(false) @map("is_expired")
+  isAlerted   Boolean  @default(false) @map("is_alerted")
+  notes       String?
+  uploadedBy  String?  @map("uploaded_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+model MaintenanceSchedule {
+  id              String          @id @default(uuid())
+  tenantId        String          @map("tenant_id")
+  machineId       String          @map("machine_id")
+  type            MaintenanceType
+  description     String?
+  intervalHours   Int?            @map("interval_hours")
+  intervalDays    Int?            @map("interval_days")
+  lastPerformedAt DateTime?       @map("last_performed_at")
+  lastHoursAt     Decimal?        @map("last_hours_at") @db.Decimal(10, 1)
+  nextDueDate     DateTime?       @map("next_due_date")
+  nextDueHours    Decimal?        @map("next_due_hours") @db.Decimal(10, 1)
+  estimatedCost   Decimal?        @map("estimated_cost") @db.Decimal(10, 2)
+  isActive        Boolean         @default(true) @map("is_active")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  machine         Machine         @relation(fields: [machineId], references: [id], onDelete: Cascade)
+
+  @@map("maintenance_schedules")
+}
+
+model PricingRule {
+  id                  String           @id @default(uuid())
+  tenantId            String           @map("tenant_id")
+  machineType         MachineType      @map("machine_type")
+  periodType          RentalPeriodType @map("period_type")
+  basePrice           Decimal          @map("base_price") @db.Decimal(10, 2)
+  seasonMultiplier    Decimal          @default(1) @map("season_multiplier") @db.Decimal(5, 2)
+  longTermDiscount    Decimal          @default(0) @map("long_term_discount") @db.Decimal(5, 2)
+  loyaltyDiscount     Decimal          @default(0) @map("loyalty_discount") @db.Decimal(5, 2)
+  operatorIncRate     Decimal          @default(0) @map("operator_inc_rate") @db.Decimal(10, 2)
+  minRentalDays       Int?             @map("min_rental_days")
+  notes               String?
+  isActive            Boolean          @default(true) @map("is_active")
+  validFrom           DateTime?        @map("valid_from")
+  validTo             DateTime?        @map("valid_to")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+
+  tenant              Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("pricing_rules")
+}
+
+model Depot {
+  id           String   @id @default(uuid())
+  tenantId     String   @map("tenant_id")
+  name         String
+  address      String?
+  lat          Float?
+  lng          Float?
+  capacity     Int?
+  contactName  String?  @map("contact_name")
+  contactPhone String?  @map("contact_phone")
+  notes        String?
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transfers    MachineTransfer[]
+
+  @@map("depots")
+}
+
+model MachineTransfer {
+  id               String   @id @default(uuid())
+  tenantId         String   @map("tenant_id")
+  machineId        String   @map("machine_id")
+  fromType         String   @map("from_type") // DEPOT, SITE
+  fromId           String   @map("from_id")
+  toType           String   @map("to_type")   // DEPOT, SITE
+  toId             String   @map("to_id")
+  transferDate     DateTime @map("transfer_date")
+  distance         Decimal? @db.Decimal(10, 1)
+  cost             Decimal? @db.Decimal(10, 2)
+  transportCompany String?  @map("transport_company")
+  status           String   @default("PLANLI") // PLANLI, YOLDA, TAMAMLANDI
+  notes            String?
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  machine          Machine  @relation(fields: [machineId], references: [id])
+  depot            Depot?   @relation(fields: [toId], references: [id])
+
+  @@map("machine_transfers")
+}
+
+model IncomeExpense {
+  id            String         @id @default(uuid())
+  tenantId      String         @map("tenant_id")
+  type          String         // GELIR, GIDER
+  category      String         // KIRALAMA, YAKIT, BAKIM, SIGORTA, NAKLIYE, PERSONEL, VERGI, DIGER
+  description   String
+  amount        Decimal        @db.Decimal(12, 2)
+  date          DateTime
+  machineId     String?        @map("machine_id")
+  customerId    String?        @map("customer_id")
+  invoiceId     String?        @map("invoice_id")
+  paymentMethod PaymentMethod?
+  reference     String?
+  notes         String?
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("income_expenses")
+}
+
+model MachineAmortization {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  machineId       String   @unique @map("machine_id")
+  purchasePrice   Decimal  @map("purchase_price") @db.Decimal(12, 2)
+  purchaseDate    DateTime @map("purchase_date")
+  usefulLifeYears Int      @default(5) @map("useful_life_years")
+  salvageValue    Decimal  @default(0) @map("salvage_value") @db.Decimal(12, 2)
+  currentValue    Decimal  @map("current_value") @db.Decimal(12, 2)
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  machine         Machine  @relation(fields: [machineId], references: [id], onDelete: Cascade)
+
+  @@map("machine_amortizations")
+}
+
+model CustomerRating {
+  id             String   @id @default(uuid())
+  tenantId       String   @map("tenant_id")
+  customerId     String   @unique @map("customer_id")
+  paymentScore   Int      @default(50) @map("payment_score")
+  loyaltyScore   Int      @default(50) @map("loyalty_score")
+  volumeScore    Int      @default(0) @map("volume_score")
+  riskScore      Int      @default(50) @map("risk_score")
+  totalRentals   Int      @default(0) @map("total_rentals")
+  totalRevenue   Decimal  @default(0) @map("total_revenue") @db.Decimal(12, 2)
+  avgPaymentDays Int      @default(0) @map("avg_payment_days")
+  lastRentalDate DateTime? @map("last_rental_date")
+  tier           String   @default("STANDART") // VIP, PREMIUM, STANDART, RISKLI
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer       Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("customer_ratings")
+}
+
+model CustomerInteraction {
+  id             String   @id @default(uuid())
+  tenantId       String   @map("tenant_id")
+  customerId     String   @map("customer_id")
+  type           String   // ARAMA, ZIYARET, EMAIL, WHATSAPP, SIKAYET, TEKLIF
+  title          String
+  description    String?
+  outcome        String?
+  nextAction     String?  @map("next_action")
+  nextActionDate DateTime? @map("next_action_date")
+  createdBy      String   @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer       Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("customer_interactions")
+}
+
+model OperatorScore {
+  id               String   @id @default(uuid())
+  tenantId         String   @map("tenant_id")
+  operatorId       String   @map("operator_id")
+  period           String   // "2026-03"
+  attendanceScore  Int      @default(0) @map("attendance_score")
+  safetyScore      Int      @default(0) @map("safety_score")
+  efficiencyScore  Int      @default(0) @map("efficiency_score")
+  maintenanceScore Int      @default(0) @map("maintenance_score")
+  totalScore       Int      @default(0) @map("total_score")
+  rank             Int?
+  badge            String?  // ALTIN, GUMUS, BRONZ
+  notes            String?
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  operator         Operator @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, operatorId, period])
+  @@map("operator_scores")
 }

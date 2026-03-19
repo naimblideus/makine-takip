@@ -1,9 +1,10 @@
 'use client'
 
-import { Menu, LogOut, User } from 'lucide-react'
+import { Menu, LogOut, Search } from 'lucide-react'
 import { signOut, useSession } from 'next-auth/react'
 import { useState, useRef, useEffect } from 'react'
 import NotificationDropdown from '@/components/NotificationDropdown'
+import GlobalSearch from '@/components/GlobalSearch'
 
 interface HeaderProps {
     onMenuClick: () => void
@@ -33,13 +34,34 @@ export default function Header({ onMenuClick }: HeaderProps) {
             {/* Sol: Hamburger (mobil) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <button
-                    className="md:hidden btn-icon btn-ghost"
+                    className="btn-icon btn-ghost"
                     onClick={onMenuClick}
                     aria-label="Menü"
+                    style={{ display: 'none' }}
+                    id="mobile-menu-btn"
                 >
                     <Menu size={22} />
                 </button>
+                {/* Global Search trigger */}
+                <button
+                    onClick={() => {
+                        const e = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true })
+                        document.dispatchEvent(e)
+                    }}
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: '0.5rem',
+                        padding: '0.5rem 0.875rem', borderRadius: '0.625rem',
+                        border: '1px solid #e2e8f0', background: '#f8fafc',
+                        color: '#94a3b8', fontSize: '0.8125rem', cursor: 'pointer',
+                        fontFamily: 'inherit', minWidth: 200,
+                    }}
+                >
+                    <Search size={15} />
+                    <span style={{ flex: 1, textAlign: 'left' }}>Ara...</span>
+                    <kbd style={{ fontSize: '0.6875rem', padding: '1px 5px', borderRadius: 3, background: '#e2e8f0', color: '#64748b' }}>Ctrl+K</kbd>
+                </button>
             </div>
+            <GlobalSearch />
 
             {/* Sağ: Bildirimler + Kullanıcı */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

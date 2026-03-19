@@ -2,8 +2,10 @@ import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from './prisma'
+import { authConfig } from './auth.config'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+    ...authConfig,
     providers: [
         Credentials({
             name: 'Credentials',
@@ -41,54 +43,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     role: user.role,
                     tenantId: user.tenantId,
                     tenantName: user.tenant.name,
+                    isSuperAdmin: user.tenantId === 'system-admin',
                 }
             },
         }),
     ],
-    session: {
-        strategy: 'jwt',
-    },
-    callbacks: {
-        async jwt({ token, user }) {
-            if (user) {
-                token.role = (user as any).role
-                token.tenantId = (user as any).tenantId
-                token.tenantName = (user as any).tenantName
-            }
-            return token
-        },
-        async session({ session, token }) {
-            if (session.user) {
-                session.user.id = token.sub!
-                    ; (session.user as any).role = token.role
-                    ; (session.user as any).tenantId = token.tenantId
-                    ; (session.user as any).tenantName = token.tenantName
-            }
-            return session
-        },
-    },
-    pages: {
-        signIn: '/login',
-    },
 })
 
-/**
- * Oturum kontrolü yapan yardımcı fonksiyon
- * Her API route'da kullanılır
- */
 export async function getSession() {
     const session = await auth()
-    if (!session?.user) {
-        return null
-    }
+    if (!session?.user) return null
     return session
 }
 
-/**
- * Tenant ID'sini oturumdan alır
- */
 export async function getTenantId(): Promise<string | null> {
     const session = await getSession()
     if (!session) return null
     return (session.user as any).tenantId
+}
+
+export async function requireSuperAdmin() {
+    const session = await getSession()
+    if (!session) return null
+    const tenantId = (session.user as any).tenantId
+    if (tenantId !== 'system-admin') return null
+    return session
 }
