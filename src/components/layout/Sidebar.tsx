@@ -9,6 +9,7 @@ import {
     CreditCard, BarChart3, X, Construction, Settings,
     MapPin, Hexagon, Bell, Shield, FileText, Warehouse,
     Trophy, TrendingUp, Calendar, DollarSign, Brain, Tag,
+    ArrowLeftRight, TrendingDown, Map, Smartphone,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -17,6 +18,7 @@ const NAV_GROUPS = [
         label: 'Genel',
         items: [
             { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+            { href: '/filo-durum', label: 'Filo Durumu', icon: Map },
             { href: '/takip', label: 'Canlı Takip', icon: MapPin },
             { href: '/bildirimler', label: 'Bildirimler', icon: Bell },
         ],
@@ -27,6 +29,8 @@ const NAV_GROUPS = [
             { href: '/makineler', label: 'Makineler', icon: Truck },
             { href: '/operatorler', label: 'Operatörler', icon: HardHat },
             { href: '/depolar', label: 'Depolar', icon: Warehouse },
+            { href: '/transferler', label: 'Nakiyeler', icon: ArrowLeftRight },
+            { href: '/amortisman', label: 'Amortisman', icon: TrendingDown },
             { href: '/geofence', label: 'Geofence', icon: Hexagon },
         ],
     },
@@ -48,6 +52,7 @@ const NAV_GROUPS = [
             { href: '/belgeler', label: 'Belgeler', icon: Shield },
             { href: '/puantaj', label: 'Puantaj', icon: ClipboardList },
             { href: '/operatorler/performans', label: 'Op. Performans', icon: Trophy },
+            { href: '/operatorler/mobil', label: 'Operatör PWA', icon: Smartphone },
         ],
     },
     {
