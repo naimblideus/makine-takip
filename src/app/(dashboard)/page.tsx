@@ -102,6 +102,85 @@ export default function DashboardPage() {
                 </div>
             )}
 
+            {/* Gündem + Kârlılık — 2 sütun */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                {/* Bugünün Gündemi */}
+                <div className="card" style={{ padding: '1.25rem' }}>
+                    <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        📅 Bugün — {new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                        {[
+                            { icon: '🔧', label: 'bakım yapılacak', count: data.agenda?.maintenances || 0, color: '#f59e0b' },
+                            { icon: '🚛', label: 'kiralama bitiyor', count: data.agenda?.endingRentals || 0, color: '#2563eb' },
+                            { icon: '⚠️', label: 'ödeme vadesi', count: data.agenda?.duePayments || 0, color: '#ef4444' },
+                            { icon: '📋', label: 'hakediş onay bekliyor', count: data.agenda?.pendingHakedis || 0, color: '#8b5cf6' },
+                        ].map((item, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', borderRadius: '0.5rem', background: '#f8fafc' }}>
+                                <span style={{ fontSize: '1.125rem' }}>{item.icon}</span>
+                                <span style={{ flex: 1, fontSize: '0.8125rem', color: '#475569' }}>
+                                    <strong style={{ color: item.color, fontSize: '1rem' }}>{item.count}</strong> {item.label}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Kârlılık Göstergesi */}
+                <div className="card" style={{ padding: '1.25rem' }}>
+                    <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, marginBottom: '1rem' }}>💰 Bu Ay Kârlılık</h3>
+                    <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+                        <div style={{ fontSize: '2rem', fontWeight: 800, color: (data.profitability?.thisMonthProfit || 0) >= 0 ? '#16a34a' : '#dc2626' }}>
+                            {formatCurrency(data.profitability?.thisMonthProfit || 0)}
+                        </div>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.375rem', padding: '0.15rem 0.5rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 700, background: (data.profitability?.trend || 0) >= 0 ? '#d1fae5' : '#fee2e2', color: (data.profitability?.trend || 0) >= 0 ? '#16a34a' : '#dc2626' }}>
+                            {(data.profitability?.trend || 0) >= 0 ? '↑' : '↓'} %{Math.abs(data.profitability?.trend || 0)} geçen aya göre
+                        </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                        <div style={{ background: '#f0fdf4', borderRadius: '0.5rem', padding: '0.75rem', textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.6875rem', color: '#16a34a', fontWeight: 600 }}>GELİR</div>
+                            <div style={{ fontWeight: 800, color: '#16a34a' }}>{formatCurrency(data.profitability?.thisMonthIncome || 0)}</div>
+                        </div>
+                        <div style={{ background: '#fef2f2', borderRadius: '0.5rem', padding: '0.75rem', textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.6875rem', color: '#dc2626', fontWeight: 600 }}>GİDER</div>
+                            <div style={{ fontWeight: 800, color: '#dc2626' }}>{formatCurrency(data.profitability?.thisMonthExpense || 0)}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Haftalık Takvim Şeridi */}
+            {data.weekEvents && data.weekEvents.length > 0 && (
+                <div className="card" style={{ padding: '1rem 1.25rem', marginBottom: '1.25rem' }}>
+                    <h3 style={{ fontSize: '0.875rem', fontWeight: 700, marginBottom: '0.75rem' }}>📆 Haftalık Takvim</h3>
+                    <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.25rem' }}>
+                        {data.weekEvents.map((day: any, i: number) => {
+                            const isToday = i === 0
+                            const hasEvents = day.maintenance > 0 || day.ending > 0 || day.payments > 0
+                            return (
+                                <div key={day.date} style={{
+                                    minWidth: 90, flex: '0 0 auto', borderRadius: '0.625rem', padding: '0.75rem 0.5rem', textAlign: 'center',
+                                    background: isToday ? '#2563eb' : hasEvents ? '#f8fafc' : '#fafafa',
+                                    color: isToday ? '#fff' : '#334155',
+                                    border: isToday ? 'none' : '1px solid #f1f5f9',
+                                }}>
+                                    <div style={{ fontSize: '0.6875rem', fontWeight: 700, marginBottom: '0.375rem', opacity: isToday ? 1 : 0.6 }}>
+                                        {day.dayLabel}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'center', flexWrap: 'wrap', minHeight: 20 }}>
+                                        {day.maintenance > 0 && <span title="Bakım" style={{ fontSize: '0.75rem' }}>🔧{day.maintenance > 1 ? day.maintenance : ''}</span>}
+                                        {day.ending > 0 && <span title="İade" style={{ fontSize: '0.75rem' }}>🚛{day.ending > 1 ? day.ending : ''}</span>}
+                                        {day.payments > 0 && <span title="Ödeme" style={{ fontSize: '0.75rem' }}>💳{day.payments > 1 ? day.payments : ''}</span>}
+                                        {!hasEvents && <span style={{ fontSize: '0.65rem', opacity: 0.4 }}>—</span>}
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
+
             {/* Filo Durumu Kartları */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
                 <StatCard icon={<Truck />} value={data.machineStats.KIRADA} label="Kirada" color="#2563eb" bgColor="#dbeafe" />

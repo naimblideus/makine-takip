@@ -38,6 +38,7 @@ const NAV_GROUPS = [
         label: 'Operasyon',
         items: [
             { href: '/musteriler', label: 'Müşteriler', icon: Users },
+            { href: '/musteri-crm', label: 'Müşteri CRM', icon: Trophy },
             { href: '/santiyeler', label: 'Şantiyeler', icon: Building2 },
             { href: '/kiralamalar', label: 'Kiralamalar', icon: CalendarRange },
             { href: '/hakedis', label: 'Hakedişler', icon: FileText },

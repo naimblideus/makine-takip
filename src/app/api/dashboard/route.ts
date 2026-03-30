@@ -180,10 +180,97 @@ export async function GET() {
             _count: true,
         })
 
+        // ── GÜNDEM: Bugünkü görevler ──
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        const todayEnd = new Date(todayStart)
+        todayEnd.setDate(todayEnd.getDate() + 1)
+
+        const todayMaintenances = await prisma.maintenanceSchedule.count({
+            where: { tenantId, isActive: true, nextDueDate: { gte: todayStart, lt: todayEnd } },
+        })
+
+        const endingRentals = await prisma.rental.count({
+            where: { tenantId, status: 'AKTIF', endDate: { gte: todayStart, lt: todayEnd } },
+        })
+
+        const dueTodayPayments = await prisma.payment.count({
+            where: { tenantId, status: { in: ['BEKLIYOR', 'GECIKTI'] }, dueDate: { gte: todayStart, lt: todayEnd } },
+        })
+
+        const pendingHakedis = await prisma.hakedis.count({
+            where: { tenantId, status: { in: ['ONAY_BEKLIYOR', 'MUSTERI_ONAY_BEKLIYOR'] } },
+        })
+
+        const agenda = {
+            maintenances: todayMaintenances,
+            endingRentals,
+            duePayments: dueTodayPayments,
+            pendingHakedis,
+        }
+
+        // ── KARLILIK: Bu ay vs geçen ay ──
+        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
+
+        const lastMonthPaid = await prisma.payment.aggregate({
+            where: { tenantId, status: 'ODENDI', paidAt: { gte: lastMonthStart, lte: lastMonthEnd } },
+            _sum: { amount: true },
+        })
+
+        const thisMonthExpenses = await prisma.incomeExpense.aggregate({
+            where: { tenantId, type: 'GIDER', date: { gte: monthStart, lte: now } },
+            _sum: { amount: true },
+        })
+
+        const lastMonthExpenses = await prisma.incomeExpense.aggregate({
+            where: { tenantId, type: 'GIDER', date: { gte: lastMonthStart, lte: lastMonthEnd } },
+            _sum: { amount: true },
+        })
+
+        const thisMonthIncome = Number(paidThisMonth._sum.amount || 0)
+        const lastMonthIncome = Number(lastMonthPaid._sum.amount || 0)
+        const thisMonthExp = Number(thisMonthExpenses._sum.amount || 0)
+        const lastMonthExp = Number(lastMonthExpenses._sum.amount || 0)
+        const thisMonthProfit = thisMonthIncome - thisMonthExp
+        const lastMonthProfit = lastMonthIncome - lastMonthExp
+        const profitTrend = lastMonthProfit !== 0
+            ? ((thisMonthProfit - lastMonthProfit) / Math.abs(lastMonthProfit)) * 100
+            : thisMonthProfit > 0 ? 100 : 0
+
+        const profitability = {
+            thisMonthIncome,
+            thisMonthExpense: thisMonthExp,
+            thisMonthProfit,
+            lastMonthProfit,
+            trend: Math.round(profitTrend),
+        }
+
+        // ── HAFTALIK TAKVİM (7 gün) ──
+        const weekEvents = []
+        for (let d = 0; d < 7; d++) {
+            const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + d)
+            const dayEnd = new Date(dayStart)
+            dayEnd.setDate(dayEnd.getDate() + 1)
+
+            const [maint, ending, payments7] = await Promise.all([
+                prisma.maintenanceSchedule.count({ where: { tenantId, isActive: true, nextDueDate: { gte: dayStart, lt: dayEnd } } }),
+                prisma.rental.count({ where: { tenantId, status: 'AKTIF', endDate: { gte: dayStart, lt: dayEnd } } }),
+                prisma.payment.count({ where: { tenantId, status: { in: ['BEKLIYOR'] }, dueDate: { gte: dayStart, lt: dayEnd } } }),
+            ])
+
+            weekEvents.push({
+                date: dayStart.toISOString().slice(0, 10),
+                dayLabel: dayStart.toLocaleDateString('tr-TR', { weekday: 'short', day: 'numeric' }),
+                maintenance: maint,
+                ending,
+                payments: payments7,
+            })
+        }
+
         return NextResponse.json({
             machineStats,
             revenue: {
-                paidThisMonth: Number(paidThisMonth._sum.amount || 0),
+                paidThisMonth: thisMonthIncome,
                 pending: Number(pendingPayments._sum.amount || 0),
                 overdue: Number(overdueAmount._sum.amount || 0),
             },
@@ -203,6 +290,9 @@ export async function GET() {
                 type: t.type,
                 count: t._count,
             })),
+            agenda,
+            profitability,
+            weekEvents,
         })
     } catch (error) {
         console.error('Dashboard API hatası:', error)
