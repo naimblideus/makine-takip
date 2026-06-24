@@ -5,13 +5,12 @@ import { prisma } from '@/lib/prisma'
 import { getAllPositions } from '@/lib/traccar'
 import { isPointInPolygon, isPointInCircle } from '@/lib/gps-analyzer'
 import { sendCommand } from '@/lib/traccar'
+import { dispatchTenantAlert } from '@/lib/alert-dispatch'
+import { cronAuthorized } from '@/lib/api-guard'
 
 export async function GET(req: NextRequest) {
     try {
-        const key = new URL(req.url).searchParams.get('key')
-        if (key !== process.env.CRON_SECRET && key !== 'dev') {
-            return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-        }
+        if (!cronAuthorized(req)) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
         const positions = await getAllPositions()
         let breachesDetected = 0
@@ -99,6 +98,13 @@ export async function GET(req: NextRequest) {
                                 data: { lat: pos.lat, lng: pos.lng, geofenceName: geofence.name },
                             },
                         })
+
+                        await dispatchTenantAlert(
+                            machine.tenantId,
+                            `Geofence Ihlali: ${machine.brand} ${machine.model}`,
+                            `${machine.plate || ''} "${geofence.name}" bolgesinden cikti`,
+                            { lat: pos.lat, lng: pos.lng },
+                        )
 
                         // Motor durdurma eylemi
                         if (geofence.actionOnBreach === 'STOP' && machine.traccarDeviceId) {

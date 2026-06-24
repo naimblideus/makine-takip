@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -8,28 +9,43 @@ import {
     CalendarRange, Fuel, Wrench, ClipboardList, Receipt,
     CreditCard, BarChart3, X, Construction, Settings,
     MapPin, Hexagon, Bell, Shield, FileText, Warehouse,
-    Trophy, TrendingUp, Calendar, DollarSign, Brain, Tag,
-    ArrowLeftRight, TrendingDown, Map, Smartphone,
+    Trophy, Calendar, DollarSign, Brain, Tag,
+    ArrowLeftRight, TrendingDown, Map, Smartphone, Sparkles, Store,
+    ShieldAlert, Gauge, FileSignature, Landmark, Inbox, ChevronDown, SlidersHorizontal,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const NAV_GROUPS = [
+// ─────────────────────────────────────────────────────────────────────────────
+// Tek kaynak nav yapısı — yeni sayfa eklemek = tek satır ekle (core veya advanced).
+// CORE: patronun her gün kullandığı, düz/üstte gösterilen menü.
+// ADVANCED: alt gruplu, "Gelişmiş" altında katlanan gerisi.
+// ─────────────────────────────────────────────────────────────────────────────
+
+type NavItem = { href: string; label: string; icon: any }
+type NavGroup = { label: string; items: NavItem[] }
+
+const CORE: NavItem[] = [
+    { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/filo-durum', label: 'Filo Durumu', icon: Map },
+    { href: '/makineler', label: 'Makineler', icon: Truck },
+    { href: '/kiralamalar', label: 'Kiralamalar', icon: CalendarRange },
+    { href: '/teklifler', label: 'Teklifler', icon: FileSignature },
+    { href: '/hakedis', label: 'Hakedişler', icon: FileText },
+    { href: '/musteriler', label: 'Müşteriler', icon: Users },
+    { href: '/faturalar', label: 'Faturalar', icon: Receipt },
+    { href: '/borsa', label: 'Kiralama Borsası', icon: Store },
+    { href: '/bildirimler', label: 'Bildirimler', icon: Bell },
+]
+
+const ADVANCED: NavGroup[] = [
     {
-        label: 'Genel',
+        label: 'Filo & Takip',
         items: [
-            { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-            { href: '/filo-durum', label: 'Filo Durumu', icon: Map },
             { href: '/takip', label: 'Canlı Takip', icon: MapPin },
-            { href: '/bildirimler', label: 'Bildirimler', icon: Bell },
-        ],
-    },
-    {
-        label: 'Filo',
-        items: [
-            { href: '/makineler', label: 'Makineler', icon: Truck },
             { href: '/operatorler', label: 'Operatörler', icon: HardHat },
             { href: '/depolar', label: 'Depolar', icon: Warehouse },
-            { href: '/transferler', label: 'Nakiyeler', icon: ArrowLeftRight },
+            { href: '/transferler', label: 'Nakliyeler', icon: ArrowLeftRight },
+            { href: '/atil-makine', label: 'Atıl Makine', icon: Gauge },
             { href: '/amortisman', label: 'Amortisman', icon: TrendingDown },
             { href: '/geofence', label: 'Geofence', icon: Hexagon },
         ],
@@ -37,42 +53,42 @@ const NAV_GROUPS = [
     {
         label: 'Operasyon',
         items: [
-            { href: '/musteriler', label: 'Müşteriler', icon: Users },
             { href: '/musteri-crm', label: 'Müşteri CRM', icon: Trophy },
             { href: '/santiyeler', label: 'Şantiyeler', icon: Building2 },
-            { href: '/kiralamalar', label: 'Kiralamalar', icon: CalendarRange },
-            { href: '/hakedis', label: 'Hakedişler', icon: FileText },
+            { href: '/talepler', label: 'Talepler', icon: Inbox },
         ],
     },
     {
-        label: 'Takip & Bakım',
+        label: 'Bakım & Saha',
         items: [
             { href: '/yakit', label: 'Yakıt Takibi', icon: Fuel },
             { href: '/bakim', label: 'Bakım Takibi', icon: Wrench },
             { href: '/bakim-takvimi', label: 'Bakım Takvimi', icon: Calendar },
             { href: '/belgeler', label: 'Belgeler', icon: Shield },
+            { href: '/isg', label: 'İSG Ceza Kalkanı', icon: ShieldAlert },
             { href: '/puantaj', label: 'Puantaj', icon: ClipboardList },
             { href: '/operatorler/performans', label: 'Op. Performans', icon: Trophy },
             { href: '/operatorler/mobil', label: 'Operatör PWA', icon: Smartphone },
         ],
     },
     {
-        label: 'Finans',
+        label: 'Finans & Analiz',
         items: [
-            { href: '/faturalar', label: 'Faturalar', icon: Receipt },
             { href: '/odemeler', label: 'Ödemeler', icon: CreditCard },
             { href: '/gelir-gider', label: 'Gelir & Gider', icon: DollarSign },
+            { href: '/finans', label: 'Finans & Sigorta', icon: Landmark },
             { href: '/fiyatlama', label: 'Fiyatlama', icon: Tag },
             { href: '/raporlar', label: 'Raporlar', icon: BarChart3 },
-        ],
-    },
-    {
-        label: 'Akıl',
-        items: [
             { href: '/ai-oneriler', label: 'AI Öneriler', icon: Brain },
         ],
     },
 ]
+
+const ADV_STORAGE_KEY = 'mt-nav-adv'
+const groupHeader: React.CSSProperties = {
+    fontSize: '0.625rem', fontWeight: 700, color: 'rgba(255,255,255,0.25)',
+    textTransform: 'uppercase', letterSpacing: '0.08em', padding: '0.75rem 0.875rem 0.25rem',
+}
 
 interface SidebarProps {
     isOpen: boolean
@@ -84,13 +100,47 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const { data: session } = useSession()
     const isSuperAdmin = (session?.user as any)?.isSuperAdmin
 
+    const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href))
+    // Aktif rota Gelişmiş içindeyse bölüm açık başlasın (aktif item görünsün)
+    const advActive = ADVANCED.some(g => g.items.some(it => isActive(it.href)))
+    const [advOpen, setAdvOpen] = useState(advActive)
+
+    // Kullanıcının manuel tercihini hatırla
+    useEffect(() => {
+        try { if (localStorage.getItem(ADV_STORAGE_KEY) === '1') setAdvOpen(true) } catch { }
+    }, [])
+    // Gelişmiş bir sayfaya geçilirse otomatik aç
+    useEffect(() => { if (advActive) setAdvOpen(true) }, [advActive])
+
+    const toggleAdv = () => {
+        setAdvOpen(o => {
+            const next = !o
+            try { localStorage.setItem(ADV_STORAGE_KEY, next ? '1' : '0') } catch { }
+            return next
+        })
+    }
+
+    const closeOnMobile = () => { if (typeof window !== 'undefined' && window.innerWidth < 768) onClose() }
+
+    const renderLink = (item: NavItem) => {
+        const Icon = item.icon
+        return (
+            <Link
+                key={item.href}
+                href={item.href}
+                className={cn('sidebar-link', isActive(item.href) && 'sidebar-link-active')}
+                onClick={closeOnMobile}
+            >
+                <Icon size={18} />
+                <span>{item.label}</span>
+            </Link>
+        )
+    }
+
     return (
         <>
             {/* Overlay (mobil) */}
-            <div
-                className={cn('sidebar-overlay', isOpen && 'active')}
-                onClick={onClose}
-            />
+            <div className={cn('sidebar-overlay', isOpen && 'active')} onClick={onClose} />
 
             {/* Sidebar */}
             <aside className={cn('sidebar', isOpen && 'open')}>
@@ -116,47 +166,50 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                 {/* Navigasyon */}
                 <nav className="sidebar-nav">
-                    {NAV_GROUPS.map((group) => (
-                        <div key={group.label} style={{ marginBottom: '0.25rem' }}>
-                            <div style={{
-                                fontSize: '0.625rem', fontWeight: 700, color: 'rgba(255,255,255,0.25)',
-                                textTransform: 'uppercase', letterSpacing: '0.08em',
-                                padding: '0.75rem 0.875rem 0.25rem',
-                            }}>
-                                {group.label}
-                            </div>
-                            {group.items.map((item) => {
-                                const isActive = pathname === item.href ||
-                                    (item.href !== '/' && pathname.startsWith(item.href))
-                                const Icon = item.icon
-                                return (
-                                    <Link
-                                        key={item.href}
-                                        href={item.href}
-                                        className={cn('sidebar-link', isActive && 'sidebar-link-active')}
-                                        onClick={() => { if (window.innerWidth < 768) onClose() }}
-                                    >
-                                        <Icon size={18} />
-                                        <span>{item.label}</span>
-                                    </Link>
-                                )
-                            })}
-                        </div>
-                    ))}
-
-                    {/* Ayarlar */}
+                    {/* Sık kullanılan — düz liste */}
                     <div style={{ marginBottom: '0.25rem' }}>
-                        <div style={{
-                            fontSize: '0.625rem', fontWeight: 700, color: 'rgba(255,255,255,0.25)',
-                            textTransform: 'uppercase', letterSpacing: '0.08em',
-                            padding: '0.75rem 0.875rem 0.25rem',
-                        }}>
-                            Sistem
-                        </div>
+                        <div style={groupHeader}>Sık Kullanılan</div>
+                        {CORE.map(renderLink)}
+                    </div>
+
+                    {/* Gelişmiş — katlanabilir */}
+                    <div style={{ marginBottom: '0.25rem' }}>
+                        <button
+                            onClick={toggleAdv}
+                            className={cn('sidebar-link', advActive && !advOpen && 'sidebar-link-active')}
+                            style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', justifyContent: 'space-between' }}
+                            aria-expanded={advOpen}
+                        >
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <SlidersHorizontal size={18} />
+                                <span>Gelişmiş</span>
+                            </span>
+                            <ChevronDown size={16} style={{ opacity: 0.6, transition: 'transform 0.2s', transform: advOpen ? 'rotate(180deg)' : 'none' }} />
+                        </button>
+
+                        {advOpen && ADVANCED.map(group => (
+                            <div key={group.label} style={{ marginBottom: '0.25rem' }}>
+                                <div style={groupHeader}>{group.label}</div>
+                                {group.items.map(renderLink)}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Sistem */}
+                    <div style={{ marginBottom: '0.25rem' }}>
+                        <div style={groupHeader}>Sistem</div>
+                        <Link
+                            href="/abonelik"
+                            className={cn('sidebar-link', pathname.startsWith('/abonelik') && 'sidebar-link-active')}
+                            onClick={closeOnMobile}
+                        >
+                            <Sparkles size={18} />
+                            <span>Abonelik</span>
+                        </Link>
                         <Link
                             href="/ayarlar"
                             className={cn('sidebar-link', pathname.startsWith('/ayarlar') && 'sidebar-link-active')}
-                            onClick={() => { if (window.innerWidth < 768) onClose() }}
+                            onClick={closeOnMobile}
                         >
                             <Settings size={18} />
                             <span>Ayarlar</span>
@@ -165,11 +218,22 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                             <Link
                                 href="/super-admin"
                                 className={cn('sidebar-link', pathname.startsWith('/super-admin') && 'sidebar-link-active')}
-                                onClick={() => { if (window.innerWidth < 768) onClose() }}
+                                onClick={closeOnMobile}
                                 style={{ color: '#c4b5fd' }}
                             >
                                 <Shield size={18} />
                                 <span>Süper Admin</span>
+                            </Link>
+                        )}
+                        {isSuperAdmin && (
+                            <Link
+                                href="/bayiler"
+                                className={cn('sidebar-link', pathname.startsWith('/bayiler') && 'sidebar-link-active')}
+                                onClick={closeOnMobile}
+                                style={{ color: '#7dd3fc' }}
+                            >
+                                <Store size={18} />
+                                <span>Bayi Ağı</span>
                             </Link>
                         )}
                     </div>

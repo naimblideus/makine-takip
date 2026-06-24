@@ -12,7 +12,7 @@ export default function YeniSantiyePage() {
     const [customers, setCustomers] = useState<any[]>([])
 
     useEffect(() => {
-        fetch('/api/musteriler').then(r => r.json()).then(setCustomers)
+        fetch('/api/musteriler').then(r => r.json()).then(d => setCustomers(Array.isArray(d) ? d : (d.customers || []))).catch(() => { })
     }, [])
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {

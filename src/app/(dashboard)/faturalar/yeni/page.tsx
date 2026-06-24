@@ -21,7 +21,7 @@ export default function YeniFaturaPage() {
     const totalAmount = subtotal ? parseFloat(subtotal) + taxAmount : 0
 
     useEffect(() => {
-        fetch('/api/musteriler').then(r => r.json()).then(setCustomers)
+        fetch('/api/musteriler').then(r => r.json()).then(d => setCustomers(Array.isArray(d) ? d : [])).catch(() => setCustomers([]))
     }, [])
 
     useEffect(() => {

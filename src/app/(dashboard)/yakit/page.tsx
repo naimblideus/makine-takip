@@ -20,6 +20,7 @@ export default function YakitPage() {
     const [entries, setEntries] = useState<any[]>([])
     const [machines, setMachines] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
+    const [kayip, setKayip] = useState<any>(null)
     const [machineFilter, setMachineFilter] = useState('all')
     const [dateFilter, setDateFilter] = useState('all') // all, thisMonth, lastMonth, last3Months
 
@@ -27,9 +28,11 @@ export default function YakitPage() {
         Promise.all([
             fetch('/api/yakit').then(r => r.json()),
             fetch('/api/makineler').then(r => r.json()),
-        ]).then(([fuelEntries, machineList]) => {
+            fetch('/api/yakit-kayip').then(r => r.json()),
+        ]).then(([fuelEntries, machineList, kayipData]) => {
             setEntries(Array.isArray(fuelEntries) ? fuelEntries : [])
             setMachines(Array.isArray(machineList) ? machineList : [])
+            setKayip(kayipData)
         }).catch(console.error)
             .finally(() => setLoading(false))
     }, [])
@@ -142,6 +145,32 @@ export default function YakitPage() {
                     Yeni Kayıt
                 </Link>
             </div>
+
+            {/* Yakıt Hırsızlığı Koruması — parasal panel (EXPAND wedge) */}
+            {kayip && (kayip.alertCountTotal > 0) && (
+                <div className="card" style={{ padding: '1.25rem', marginBottom: '1.25rem', border: '1px solid #fecaca', background: 'linear-gradient(180deg,#fff,#fef2f2)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, color: '#b91c1c' }}>
+                                🛡 Yakıt Hırsızlığı Koruması
+                            </div>
+                            <div style={{ fontSize: '0.82rem', color: '#7f1d1d', marginTop: '0.25rem' }}>
+                                Bu ay <b>{kayip.alertCountThisMonth}</b> şüpheli düşüş yakalandı · ~<b>{kayip.litersThisMonth} litre</b> · motorin {formatCurrency(kayip.fuelPrice)}/L
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '1.5rem' }}>
+                            <div style={{ textAlign: 'right' }}>
+                                <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Bu ay korunan</div>
+                                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#dc2626' }}>{formatCurrency(kayip.tlThisMonth)}</div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                                <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Toplam</div>
+                                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#1e293b' }}>{formatCurrency(kayip.tlTotal)}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* İstatistik Kartları */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>

@@ -22,6 +22,7 @@ export default function MachineKarlilikPage({ params }: { params: Promise<{ id: 
     if (!data) return <div className="alert alert-danger">Veri yüklenemedi</div>
 
     const { machine, karlilık, monthlyRevenue, amortization } = data
+    if (!karlilık) return <div className="alert alert-danger">Veri yüklenemedi</div>
     const isProfit = karlilık.netProfit >= 0
 
     return (

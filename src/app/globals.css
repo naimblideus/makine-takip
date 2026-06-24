@@ -887,3 +887,73 @@ body {
     display: flex !important;
   }
 }
+
+/* ─── Form alias (.form-input / .form-label = .input / .label) ─── */
+.form-input {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--color-border);
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: var(--color-foreground);
+  background: white;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  min-height: 44px;
+  outline: none;
+}
+
+.form-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-input::placeholder {
+  color: var(--color-muted-light);
+}
+
+.form-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-foreground);
+  margin-bottom: 0.375rem;
+}
+
+textarea.form-input,
+textarea.input {
+  min-height: auto;
+}
+
+/* ─── Responsive iyileştirmeleri ─── */
+@media (max-width: 640px) {
+  .main-body {
+    padding: 1rem;
+  }
+
+  .page-title {
+    font-size: 1.25rem;
+  }
+
+  /* Geniş tablolar mobilde yatay kayar (kırpılmaz) */
+  .table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  .stat-card-value {
+    font-size: 1.4rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .main-body {
+    padding: 0.75rem;
+  }
+}

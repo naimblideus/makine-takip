@@ -2,16 +2,15 @@
 // Her 5 dakikada çalışır: motor açma/kapama oturumlarını kaydeder
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getAllPositions } from '@/lib/traccar'
-import { detectUnauthorizedUse } from '@/lib/gps-analyzer'
+import { getAllPositions, getRouteHistory } from '@/lib/traccar'
+import { detectUnauthorizedUse, computeSessionMetrics } from '@/lib/gps-analyzer'
+import { dispatchTenantAlert } from '@/lib/alert-dispatch'
+import { cronAuthorized } from '@/lib/api-guard'
 
 export async function GET(req: NextRequest) {
     try {
         // Cron güvenliği
-        const key = new URL(req.url).searchParams.get('key')
-        if (key !== process.env.CRON_SECRET && key !== 'dev') {
-            return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-        }
+        if (!cronAuthorized(req)) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
         const positions = await getAllPositions()
         const tenants = await prisma.tenant.findMany({ select: { id: true } })
@@ -75,12 +74,32 @@ export async function GET(req: NextRequest) {
                                 engineOn: true,
                             },
                         })
+                        await dispatchTenantAlert(
+                            tenant.id,
+                            `Yetkisiz Kullanim: ${machine.brand} ${machine.model}`,
+                            `${machine.plate || ''} mesai disi calistirildi (saat ${startHour}:00)`,
+                            { lat: pos.lat, lng: pos.lng },
+                        )
                     }
                 } else if (!ignition && activeSession) {
                     // Motor kapandı → session kapat
                     const duration = Math.round((Date.now() - new Date(activeSession.startedAt).getTime()) / 60000)
-                    const idleMinutes = Math.round(duration * 0.2) // Tahmini idle
-                    const workMinutes = duration - idleMinutes
+
+                    // Gerçek pozisyon geçmişinden idle/work (uydurma katsayı YOK; veri yoksa null)
+                    let idleMinutes: number | null = null
+                    let workMinutes: number | null = null
+                    let avgSpeedVal: number | null = null
+                    let maxSpeedVal: number = pos.speed
+                    try {
+                        const history = await getRouteHistory(machine.traccarDeviceId!, new Date(activeSession.startedAt), new Date())
+                        const m = computeSessionMetrics(history as any, duration)
+                        idleMinutes = m.idleMinutes
+                        workMinutes = m.workMinutes
+                        avgSpeedVal = m.avgSpeed
+                        if (m.maxSpeed != null) maxSpeedVal = m.maxSpeed
+                    } catch (e) {
+                        console.error('Oturum metrik hatası:', e)
+                    }
 
                     await prisma.engineSession.update({
                         where: { id: activeSession.id },
@@ -89,8 +108,8 @@ export async function GET(req: NextRequest) {
                             durationMinutes: duration,
                             idleMinutes,
                             workMinutes,
-                            maxSpeed: pos.speed,
-                            avgSpeed: pos.speed * 0.6,
+                            maxSpeed: maxSpeedVal,
+                            avgSpeed: avgSpeedVal,
                         },
                     })
 
@@ -104,8 +123,8 @@ export async function GET(req: NextRequest) {
 
                     sessionsClosed++
 
-                    // Idle alarm
-                    if (idleMinutes > machine.idleThresholdMinutes) {
+                    // Idle alarm (idle ölçülebildiyse)
+                    if (idleMinutes != null && idleMinutes > machine.idleThresholdMinutes) {
                         await prisma.systemNotification.create({
                             data: {
                                 tenantId: tenant.id,

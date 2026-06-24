@@ -88,7 +88,7 @@ export default function KiralamaDetayPage() {
     }
 
     if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}><div className="spinner" /></div>
-    if (!rental) return <div className="alert alert-danger">Kiralama bulunamadı</div>
+    if (!rental || !rental.machine) return <div className="alert alert-danger">Kiralama bulunamadı</div>
 
     const statusColor = RENTAL_STATUS_COLORS[rental.status as keyof typeof RENTAL_STATUS_COLORS]
     const days = Math.ceil((new Date(rental.endDate || Date.now()).getTime() - new Date(rental.startDate).getTime()) / 86400000)

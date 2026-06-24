@@ -15,11 +15,11 @@ export default function YeniOdemePage() {
     const [selectedCustomer, setSelectedCustomer] = useState('')
 
     useEffect(() => {
-        fetch('/api/musteriler').then(r => r.json()).then(setCustomers)
+        fetch('/api/musteriler').then(r => r.json()).then(d => setCustomers(Array.isArray(d) ? d : []))
         fetch('/api/faturalar').then(r => r.json()).then(setInvoices)
     }, [])
 
-    const customerInvoices = invoices.filter((inv: any) => inv.customerId === selectedCustomer)
+    const customerInvoices = Array.isArray(invoices) ? invoices.filter((inv: any) => inv.customerId === selectedCustomer) : []
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()

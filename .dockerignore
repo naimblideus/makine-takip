@@ -1,0 +1,32 @@
+# Bağımlılıklar & build çıktıları (imajda yeniden üretilir)
+node_modules
+.next
+out
+
+# Git & IDE
+.git
+.gitignore
+.vscode
+.idea
+
+# Ortam & sırlar (Coolify env injection kullanılır — imaja GİRMEZ)
+.env
+.env.*
+!.env.example
+
+# Loglar & geçici
+*.log
+dev_log_makine.txt
+makine-error.log
+npm-debug.log*
+tsconfig.tsbuildinfo
+
+# Dokümanlar (imaja gerek yok)
+MASTER_PROMPT.md
+CRON_SETUP.md
+DEPLOY.md
+README.md
+
+# OS
+.DS_Store
+Thumbs.db

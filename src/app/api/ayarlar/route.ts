@@ -20,6 +20,10 @@ export async function GET() {
                 email: true,
                 taxOffice: true,
                 taxNumber: true,
+                alertPhone: true,
+                alertWhatsapp: true,
+                alertEmail: true,
+                kvkkText: true,
             },
         })
 
@@ -51,6 +55,10 @@ export async function PUT(req: NextRequest) {
                 email: body.email || null,
                 taxOffice: body.taxOffice || null,
                 taxNumber: body.taxNumber || null,
+                ...(body.alertPhone !== undefined ? { alertPhone: body.alertPhone || null } : {}),
+                ...(body.alertWhatsapp !== undefined ? { alertWhatsapp: body.alertWhatsapp || null } : {}),
+                ...(body.alertEmail !== undefined ? { alertEmail: body.alertEmail || null } : {}),
+                ...(body.kvkkText !== undefined ? { kvkkText: body.kvkkText || null } : {}),
             },
         })
 

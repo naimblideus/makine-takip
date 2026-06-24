@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { v4 as uuidv4 } from 'uuid'
+import { getTelemetryHours, buildGpsReport } from '@/lib/hakedis-telemetry'
+import { toMoney, taxOf } from '@/lib/calc'
 
 export async function GET(req: NextRequest) {
     const session = await auth()
@@ -53,7 +55,7 @@ export async function POST(req: NextRequest) {
         rentalId, periodStart, periodEnd, periodLabel,
         totalHours, workingDays, idleHours, overtimeHours,
         unitPrice, periodType, fuelCost, operatorCost, transportCost,
-        extraCosts, discount, taxRate, notes, photos,
+        extraCosts, discount, taxRate, notes, photos, useTelemetryHours,
     } = body
 
     // Kiralama bilgisini al
@@ -61,7 +63,19 @@ export async function POST(req: NextRequest) {
     if (!rental) return NextResponse.json({ error: 'Kiralama bulunamadı' }, { status: 404 })
 
     const price = Number(unitPrice || rental.unitPrice)
-    const hours = Number(totalHours || 0)
+    const manualHours = Number(totalHours || 0)
+
+    // ── Telemetri (wedge): motor çalışma saatini dönemden çek ──
+    const telemetry = await getTelemetryHours(
+        rental.machineId,
+        new Date(periodStart),
+        new Date(periodEnd),
+        tenantId,
+        rentalId,
+    )
+    // useTelemetryHours=true ise faturalanan saat = doğrulanmış ignition saati
+    const hours = useTelemetryHours && telemetry.hasTelemetry ? telemetry.ignitionHours : manualHours
+    const gpsReport = buildGpsReport(telemetry, manualHours, price)
     const days = Number(workingDays || 0)
     const tRate = Number(taxRate || 20)
     const disc = Number(discount || 0)
@@ -76,9 +90,9 @@ export async function POST(req: NextRequest) {
     else if (periodType === 'HAFTALIK') subtotal = price * Math.ceil(days / 7)
     else subtotal = price * Math.ceil(days / 30)
 
-    subtotal += fuel + opCost + transp + extra - disc
-    const taxAmount = subtotal * (tRate / 100)
-    const totalAmount = subtotal + taxAmount
+    subtotal = toMoney(subtotal + fuel + opCost + transp + extra - disc)
+    const taxAmount = taxOf(subtotal, tRate)
+    const totalAmount = toMoney(subtotal + taxAmount)
 
     const hakedis = await prisma.hakedis.create({
         data: {
@@ -92,7 +106,7 @@ export async function POST(req: NextRequest) {
             periodLabel: periodLabel || `${new Date(periodStart).toLocaleDateString('tr-TR')} - ${new Date(periodEnd).toLocaleDateString('tr-TR')}`,
             totalHours: hours,
             workingDays: days,
-            idleHours: idleHours ? Number(idleHours) : null,
+            idleHours: idleHours ? Number(idleHours) : (telemetry.hasTelemetry ? telemetry.estimatedIdleHours : null),
             overtimeHours: overtimeHours ? Number(overtimeHours) : null,
             unitPrice: price,
             periodType: (rental as any).periodType,
@@ -107,6 +121,7 @@ export async function POST(req: NextRequest) {
             totalAmount,
             notes: notes || null,
             photos: photos || [],
+            gpsReport: gpsReport as any,
             preparedBy: (session.user as any).name,
         },
     })

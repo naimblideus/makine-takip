@@ -3,13 +3,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAllPositions } from '@/lib/traccar'
+import { dispatchTenantAlert } from '@/lib/alert-dispatch'
+import { cronAuthorized } from '@/lib/api-guard'
 
 export async function GET(req: NextRequest) {
     try {
-        const key = new URL(req.url).searchParams.get('key')
-        if (key !== process.env.CRON_SECRET && key !== 'dev') {
-            return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
-        }
+        if (!cronAuthorized(req)) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
 
         const positions = await getAllPositions()
         const tenants = await prisma.tenant.findMany({ select: { id: true } })
@@ -103,6 +102,13 @@ export async function GET(req: NextRequest) {
                                     data: { lat: pos.lat, lng: pos.lng, fuelBefore: previousFuel, fuelAfter: currentFuel },
                                 },
                             })
+
+                            await dispatchTenantAlert(
+                                tenant.id,
+                                `Yakit Hirsizligi: ${machine.brand} ${machine.model}`,
+                                `${machine.plate || ''} ~${litersLost} litre yakit kaybi tespit edildi`,
+                                { lat: pos.lat, lng: pos.lng },
+                            )
 
                             alertsCreated++
                         }

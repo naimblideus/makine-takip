@@ -21,7 +21,7 @@ export default function RaporlarPage() {
     }
     useEffect(() => { load() }, [year])
 
-    if (loading || !data) return <div className="spinner" style={{ margin: '3rem auto' }} />
+    if (loading || !data || !data.kpi) return <div className="spinner" style={{ margin: '3rem auto' }} />
     const { kpi, monthlyRevenue, machineRanking, topCustomers } = data
 
     return (

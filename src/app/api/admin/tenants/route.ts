@@ -20,8 +20,11 @@ export async function GET() {
                     select: { id: true, email: true, name: true },
                     take: 1,
                 },
+                dealer: { select: { id: true, name: true } },
             },
         })
+
+        const dealers = await prisma.dealer.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } })
 
         const stats = {
             totalTenants: tenants.length,
@@ -30,7 +33,7 @@ export async function GET() {
             totalRentals: tenants.reduce((s, t) => s + t._count.rentals, 0),
         }
 
-        return NextResponse.json({ tenants, stats })
+        return NextResponse.json({ tenants, stats, dealers })
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
@@ -85,7 +88,8 @@ export async function PUT(req: NextRequest) {
 
     try {
         const body = await req.json()
-        const { id, name, phone, email, address, taxOffice, taxNumber, adminEmail, adminPassword } = body
+        const { id, name, phone, email, address, taxOffice, taxNumber, adminEmail, adminPassword,
+            dealerId, plan, subscriptionStatus, machineLimit } = body
 
         if (!id) return NextResponse.json({ error: 'ID zorunlu' }, { status: 400 })
 
@@ -96,6 +100,10 @@ export async function PUT(req: NextRequest) {
         if (address !== undefined) updateData.address = address
         if (taxOffice !== undefined) updateData.taxOffice = taxOffice
         if (taxNumber !== undefined) updateData.taxNumber = taxNumber
+        if (dealerId !== undefined) updateData.dealerId = dealerId || null
+        if (plan !== undefined) updateData.plan = plan
+        if (subscriptionStatus !== undefined) updateData.subscriptionStatus = subscriptionStatus
+        if (machineLimit !== undefined) updateData.machineLimit = Number(machineLimit)
 
         const tenant = await prisma.tenant.update({
             where: { id },

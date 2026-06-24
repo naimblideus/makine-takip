@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { createInvoiceFromHakedis } from '@/lib/hakedis-fatura'
+import { rateLimited } from '@/lib/api-guard'
+import { PortalActionSchema, parseBody } from '@/lib/schemas'
 
 // Public API — token ile müşteri portalı erişimi
 export async function GET(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
@@ -44,8 +47,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
     const { token } = await params
-    const body = await req.json()
-    const { action, signature } = body // action: ONAYLA | REDDET
+    const limited = rateLimited(req, 'portal', 10, 60_000)
+    if (limited) return limited
+    const parsed = parseBody(PortalActionSchema, await req.json())
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 })
+    const { action, signature } = parsed.data
 
     const hakedis = await prisma.hakedis.findFirst({ where: { customerToken: token } })
     if (!hakedis) return NextResponse.json({ error: 'Geçersiz link' }, { status: 404 })
@@ -62,6 +68,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
             customerSignature: signature || null,
         },
     })
+
+    // Müşteri onaylayınca otomatik fatura (nakit motoru)
+    if (action === 'ONAYLA') {
+        try { await createInvoiceFromHakedis(hakedis.id, hakedis.tenantId) } catch (e) { console.error('Portal oto fatura hatası:', e) }
+    }
 
     return NextResponse.json({ success: true, status: newStatus })
 }

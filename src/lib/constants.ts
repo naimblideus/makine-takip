@@ -143,6 +143,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
     BOSTA_CALISIYOR: 'Boşta Çalışıyor',
     MOTOR_DURDU: 'Motor Durduruldu',
     OPERATOR_BELGESI_DOLACAK: 'Operatör Belgesi',
+    ARIZA_BILDIRIMI: 'Arıza Bildirimi',
 }
 
 export const NOTIFICATION_TYPE_ICONS: Record<string, string> = {
@@ -157,6 +158,7 @@ export const NOTIFICATION_TYPE_ICONS: Record<string, string> = {
     BOSTA_CALISIYOR: '💤',
     MOTOR_DURDU: '🛑',
     OPERATOR_BELGESI_DOLACAK: '👷',
+    ARIZA_BILDIRIMI: '🔧',
 }
 
 // ─── Sidebar Navigasyon ──────────────────────────────────

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { notifyCustomer } from '@/lib/messaging'
+import { createInvoiceFromHakedis } from '@/lib/hakedis-fatura'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
@@ -54,6 +56,35 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const updated = await prisma.hakedis.update({ where: { id }, data: updateData })
+
+    // Müşteriye otomatik gönderim (SMS + e-posta) — ilk kez müşteri onayına çıkınca
+    if (body.status === 'MUSTERI_ONAY_BEKLIYOR' && !hakedis.sentToCustomerAt && updated.customerToken) {
+        try {
+            const customer = await prisma.customer.findUnique({
+                where: { id: updated.customerId },
+                select: { companyName: true, phone: true, email: true },
+            })
+            const base = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin
+            const portalUrl = `${base}/portal/${updated.customerToken}`
+            const smsText = `Sayin ${customer?.companyName || ''}, ${updated.periodLabel} donemi hakedisiniz onayiniza sunuldu. Inceleyip imzalamak icin: ${portalUrl}`
+            const emailHtml = `<p>Sayın ${customer?.companyName || ''},</p>
+<p><b>${updated.periodLabel}</b> dönemi hakedişiniz onayınıza sunulmuştur. Çalışma saati makinenin GPS/motor verisiyle doğrulanmıştır.</p>
+<p><a href="${portalUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:bold">Hakedişi görüntüle ve imzala →</a></p>
+<p style="color:#64748b;font-size:13px">${portalUrl}</p>`
+            await notifyCustomer(
+                { phone: customer?.phone, email: customer?.email, name: customer?.companyName },
+                { subject: `Hakediş Onayı — ${updated.periodLabel}`, smsText, emailHtml },
+            )
+        } catch (e) {
+            console.error('Hakediş bildirim gönderimi hatası:', e)
+        }
+    }
+
+    // ── Onaylanınca otomatik fatura (nakit motoru) ──
+    if (body.status === 'MUSTERI_ONAYLADI' && hakedis.status !== 'FATURALANDI') {
+        try { await createInvoiceFromHakedis(id, tenantId) } catch (e) { console.error('Oto fatura hatası:', e) }
+    }
+
     return NextResponse.json({ hakedis: updated })
 }
 

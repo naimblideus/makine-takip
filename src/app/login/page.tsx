@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Construction, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import Link from 'next/link'
+import { Construction, Eye, EyeOff, AlertCircle, Rocket } from 'lucide-react'
 
 export default function LoginPage() {
     const router = useRouter()
@@ -31,6 +32,22 @@ export default function LoginPage() {
                 router.push('/')
                 router.refresh()
             }
+        } catch {
+            setError('Bir hata oluştu. Lütfen tekrar deneyin.')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    async function demoLogin() {
+        setError('')
+        setLoading(true)
+        try {
+            const result = await signIn('credentials', {
+                email: 'admin@yildizmakine.com', password: '123456', redirect: false,
+            })
+            if (result?.error) setError('Demo girişi başarısız')
+            else { router.push('/'); router.refresh() }
         } catch {
             setError('Bir hata oluştu. Lütfen tekrar deneyin.')
         } finally {
@@ -194,22 +211,39 @@ export default function LoginPage() {
                         </button>
                     </form>
 
+                    {/* Tek tık demo */}
+                    <button
+                        type="button"
+                        onClick={demoLogin}
+                        disabled={loading}
+                        className="btn"
+                        style={{ width: '100%', marginTop: '0.875rem', background: '#0f172a', color: '#fff' }}
+                    >
+                        <Rocket size={16} /> Demoyu Tek Tıkla İncele
+                    </button>
+
                     {/* Demo bilgileri */}
                     <div style={{
-                        marginTop: '1.5rem',
-                        padding: '1rem',
+                        marginTop: '1rem',
+                        padding: '0.875rem 1rem',
                         borderRadius: '0.75rem',
                         background: '#f8fafc',
                         border: '1px solid #e2e8f0',
                     }}>
-                        <p style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem', color: '#64748b' }}>
-                            Demo Giriş Bilgileri
+                        <p style={{ fontSize: '0.7rem', fontWeight: 600, marginBottom: '0.375rem', color: '#94a3b8' }}>
+                            Demo giriş bilgileri (elle)
                         </p>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.8 }}>
-                            <div><strong>Admin:</strong> admin@yildizmakine.com</div>
-                            <div><strong>Personel:</strong> personel@yildizmakine.com</div>
-                            <div><strong>Şifre:</strong> 123456</div>
+                        <div style={{ fontSize: '0.72rem', color: '#64748b', lineHeight: 1.7 }}>
+                            <div><strong>Admin:</strong> admin@yildizmakine.com · <strong>Şifre:</strong> 123456</div>
                         </div>
+                    </div>
+                </div>
+
+                {/* Kayıt + fiyat linki */}
+                <div style={{ textAlign: 'center', marginTop: '1.25rem', color: 'rgba(255,255,255,0.6)', fontSize: '0.8125rem' }}>
+                    Hesabın yok mu? <Link href="/signup" style={{ color: '#93c5fd', fontWeight: 600 }}>14 gün ücretsiz başla →</Link>
+                    <div style={{ marginTop: '0.5rem' }}>
+                        <Link href="/fiyatlar" style={{ color: 'rgba(255,255,255,0.55)', fontWeight: 500 }}>Paketleri ve fiyatları gör</Link>
                     </div>
                 </div>
             </div>

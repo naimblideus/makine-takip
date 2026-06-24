@@ -12,7 +12,7 @@ export default function YeniYakitPage() {
     const [machines, setMachines] = useState<any[]>([])
 
     useEffect(() => {
-        fetch('/api/makineler').then(r => r.json()).then(setMachines)
+        fetch('/api/makineler').then(r => r.json()).then(d => setMachines(Array.isArray(d) ? d : []))
     }, [])
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {

@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CheckCircle, XCircle, AlertTriangle, Clock, Truck, Receipt } from 'lucide-react'
+import { useParams } from 'next/navigation'
+import { CheckCircle, XCircle, AlertTriangle, Truck, Receipt, Activity, Download } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import SignaturePad from '@/components/SignaturePad'
 
 const STATUS_LABELS: Record<string, string> = {
     TASLAK: 'Taslak', ONAY_BEKLIYOR: 'Onay Bekliyor', ONAYLANDI: 'Onaylandı',
@@ -16,30 +18,36 @@ const MACHINE_TYPE_LABELS: Record<string, string> = {
     BEKO_LODER: 'Beko Loder', DIGER: 'Diğer',
 }
 
-export default function PortalPage({ params }: { params: { token: string } }) {
+export default function PortalPage() {
+    const { token } = useParams<{ token: string }>()
     const [data, setData] = useState<any>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const [done, setDone] = useState('')
+    const [sig, setSig] = useState<string | null>(null)
 
     useEffect(() => {
-        fetch(`/api/portal/${params.token}`)
+        fetch(`/api/portal/${token}`)
             .then(r => r.json())
-            .then(j => {
-                if (j.error) setError(j.error)
-                else setData(j)
-            })
+            .then(j => { if (j.error) setError(j.error); else setData(j) })
             .catch(() => setError('Sayfa yüklenemedi'))
             .finally(() => setLoading(false))
-    }, [params.token])
+    }, [token])
+
+    const payInvoice = async (invoiceId: string) => {
+        const res = await fetch('/api/odeme/baslat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ invoiceId }) })
+        const j = await res.json()
+        if (j.checkoutUrl) window.location.href = j.checkoutUrl
+    }
 
     const handleAction = async (action: 'ONAYLA' | 'REDDET') => {
+        if (action === 'ONAYLA' && !sig) return
         setSubmitting(true)
-        const res = await fetch(`/api/portal/${params.token}`, {
+        const res = await fetch(`/api/portal/${token}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action }),
+            body: JSON.stringify({ action, signature: action === 'ONAYLA' ? sig : null }),
         })
         const j = await res.json()
         if (j.success) setDone(action === 'ONAYLA' ? 'approved' : 'rejected')
@@ -67,12 +75,17 @@ export default function PortalPage({ params }: { params: { token: string } }) {
 
     if (done) return (
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
-            <div style={{ textAlign: 'center', maxWidth: 400, padding: '2rem' }}>
+            <div style={{ textAlign: 'center', maxWidth: 420, padding: '2rem' }}>
                 {done === 'approved' ? <CheckCircle size={56} color="#10b981" style={{ marginBottom: '1rem' }} /> : <XCircle size={56} color="#ef4444" style={{ marginBottom: '1rem' }} />}
                 <h1 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>
                     {done === 'approved' ? 'Hakediş Onaylandı!' : 'Hakediş Reddedildi'}
                 </h1>
-                <p style={{ color: '#64748b' }}>{done === 'approved' ? 'Teşekkürler. Fatura en kısa süre içinde iletilecektir.' : 'Firmayla iletişime geçilecektir.'}</p>
+                <p style={{ color: '#64748b', marginBottom: '1.25rem' }}>{done === 'approved' ? 'İmzanız kaydedildi. Fatura en kısa sürede iletilecektir.' : 'Firmayla iletişime geçilecektir.'}</p>
+                {done === 'approved' && (
+                    <a href={`/api/portal/${token}/pdf`} target="_blank" rel="noopener" className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <Download size={15} /> İmzalı Hakedişi İndir (PDF)
+                    </a>
+                )}
             </div>
         </div>
     )
@@ -81,6 +94,8 @@ export default function PortalPage({ params }: { params: { token: string } }) {
     const machine = hakedis.rental?.machine
     const customer = hakedis.rental?.customer
     const canApprove = hakedis.status === 'MUSTERI_ONAY_BEKLIYOR'
+    const gps = hakedis.gpsReport
+    const ignitionH = gps?.hasTelemetry ? Number(gps.ignitionHours) : null
 
     return (
         <div style={{ minHeight: '100vh', background: '#f8fafc', padding: '1.5rem', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
@@ -91,7 +106,7 @@ export default function PortalPage({ params }: { params: { token: string } }) {
                         🏗 Makine Takip — Müşteri Portalı
                     </div>
                     <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#1e293b' }}>Merhaba, {customer?.companyName}</h1>
-                    <p style={{ color: '#64748b', marginTop: '0.25rem' }}>Hakediş detaylarınızı aşağıda inceleyebilirsiniz</p>
+                    <p style={{ color: '#64748b', marginTop: '0.25rem' }}>Hakediş detaylarınızı inceleyip onaylayabilirsiniz</p>
                 </div>
 
                 {/* Hakediş Kartı */}
@@ -100,8 +115,7 @@ export default function PortalPage({ params }: { params: { token: string } }) {
                         <div>
                             <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.25rem' }}>Hakediş — {hakedis.periodLabel}</h2>
                             <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>
-                                {MACHINE_TYPE_LABELS[machine?.type] || machine?.type} — {machine?.brand} {machine?.model}
-                                {machine?.plate && ` (${machine.plate})`}
+                                {MACHINE_TYPE_LABELS[machine?.type] || machine?.type} — {machine?.brand} {machine?.model}{machine?.plate && ` (${machine.plate})`}
                             </div>
                         </div>
                         <span style={{
@@ -112,6 +126,28 @@ export default function PortalPage({ params }: { params: { token: string } }) {
                             {STATUS_LABELS[hakedis.status] || hakedis.status}
                         </span>
                     </div>
+
+                    {/* ─── GPS Doğrulama Kanıtı ─── */}
+                    {ignitionH != null && (
+                        <div style={{ border: '1px solid #d1fae5', background: '#f0fdf4', borderRadius: '0.75rem', padding: '1rem', marginBottom: '1.25rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, color: '#065f46', fontSize: '0.875rem', marginBottom: '0.625rem' }}>
+                                <Activity size={16} /> GPS Doğrulanmış Çalışma Saati
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
+                                <div style={{ background: '#fff', borderRadius: '0.5rem', padding: '0.625rem', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Faturalanan saat</div>
+                                    <div style={{ fontWeight: 800, fontSize: '1.3rem', color: '#1e293b' }}>{Number(hakedis.totalHours)}s</div>
+                                </div>
+                                <div style={{ background: '#fff', borderRadius: '0.5rem', padding: '0.625rem', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '0.7rem', color: '#059669' }}>Motor çalışma saati ✓</div>
+                                    <div style={{ fontWeight: 800, fontSize: '1.3rem', color: '#059669' }}>{ignitionH}s</div>
+                                </div>
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.5rem' }}>
+                                Çalışma saati, makinenin GPS/telemetri cihazının kontak verisinden doğrulanmıştır. Boşta/yakıt değerleri tahminidir.
+                            </div>
+                        </div>
+                    )}
 
                     {/* Detaylar */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
@@ -154,22 +190,28 @@ export default function PortalPage({ params }: { params: { token: string } }) {
                         </div>
                     </div>
 
-                    {/* Onay butonları */}
+                    {/* İmza + Onay */}
                     {canApprove && (
-                        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
-                            <button onClick={() => handleAction('REDDET')} disabled={submitting}
-                                style={{ flex: 1, padding: '0.75rem', border: '2px solid #ef4444', background: '#fff', color: '#ef4444', borderRadius: '0.625rem', fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer', fontSize: '0.9375rem' }}>
-                                ✗ Reddet
-                            </button>
-                            <button onClick={() => handleAction('ONAYLA')} disabled={submitting}
-                                style={{ flex: 2, padding: '0.75rem', background: '#10b981', color: '#fff', border: 'none', borderRadius: '0.625rem', fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer', fontSize: '0.9375rem' }}>
-                                {submitting ? 'İşleniyor...' : '✓ Hakedişi Onayla'}
-                            </button>
+                        <div style={{ marginTop: '1.5rem' }}>
+                            <SignaturePad label="Onay için imzanız" onChange={setSig} height={150} />
+                            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+                                <button onClick={() => handleAction('REDDET')} disabled={submitting}
+                                    style={{ flex: 1, padding: '0.75rem', border: '2px solid #ef4444', background: '#fff', color: '#ef4444', borderRadius: '0.625rem', fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer', fontSize: '0.9375rem' }}>
+                                    ✗ Reddet
+                                </button>
+                                <button onClick={() => handleAction('ONAYLA')} disabled={submitting || !sig}
+                                    style={{ flex: 2, padding: '0.75rem', background: sig ? '#10b981' : '#a7f3d0', color: '#fff', border: 'none', borderRadius: '0.625rem', fontWeight: 700, cursor: submitting || !sig ? 'not-allowed' : 'pointer', fontSize: '0.9375rem' }}>
+                                    {submitting ? 'İşleniyor...' : sig ? '✓ İmzala ve Onayla' : 'Önce imzalayın'}
+                                </button>
+                            </div>
                         </div>
                     )}
                     {hakedis.status === 'MUSTERI_ONAYLADI' && (
                         <div style={{ marginTop: '1rem', padding: '0.875rem', background: '#d1fae5', borderRadius: '0.625rem', color: '#065f46', fontWeight: 600, textAlign: 'center', fontSize: '0.9375rem' }}>
                             ✅ Bu hakedişi onayladınız. Teşekkürler!
+                            <div style={{ marginTop: '0.625rem' }}>
+                                <a href={`/api/portal/${token}/pdf`} target="_blank" rel="noopener" style={{ color: '#065f46', textDecoration: 'underline', fontWeight: 700, fontSize: '0.8125rem' }}>İmzalı PDF&apos;i indir</a>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -204,7 +246,10 @@ export default function PortalPage({ params }: { params: { token: string } }) {
                                     <div style={{ fontWeight: 600 }}>{inv.invoiceNumber}</div>
                                     <div style={{ color: '#92400e', fontSize: '0.75rem' }}>Vade: {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('tr-TR') : '—'}</div>
                                 </div>
-                                <div style={{ fontWeight: 700, color: '#d97706' }}>{formatCurrency(Number(inv.totalAmount))}</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <div style={{ fontWeight: 700, color: '#d97706' }}>{formatCurrency(Number(inv.totalAmount))}</div>
+                                    <button onClick={() => payInvoice(inv.id)} style={{ padding: '0.35rem 0.75rem', background: '#2563eb', color: '#fff', border: 'none', borderRadius: '0.5rem', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer' }}>Öde</button>
+                                </div>
                             </div>
                         ))}
                     </div>

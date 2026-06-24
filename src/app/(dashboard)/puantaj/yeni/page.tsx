@@ -66,7 +66,7 @@ export default function YeniPuantajPage() {
                             <label className="label">Operatör *</label>
                             <select name="operatorId" className="input select" required>
                                 <option value="">Operatör seçin...</option>
-                                {operators.map((o: any) => (
+                                {(Array.isArray(operators) ? operators : []).map((o: any) => (
                                     <option key={o.id} value={o.id}>{o.name}</option>
                                 ))}
                             </select>
@@ -75,7 +75,7 @@ export default function YeniPuantajPage() {
                             <label className="label">Kiralama *</label>
                             <select name="rentalId" className="input select" required>
                                 <option value="">Aktif kiralama seçin...</option>
-                                {rentals.map((r: any) => (
+                                {Array.isArray(rentals) && rentals.map((r: any) => (
                                     <option key={r.id} value={r.id}>
                                         {r.machine?.brand} {r.machine?.model} — {r.customer?.companyName}
                                     </option>

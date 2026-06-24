@@ -7,6 +7,14 @@ async function main() {
     console.log('🌱 Seed başlatılıyor...')
 
     // Mevcut verileri temizle (yeni modeller önce silinmeli - foreign key)
+    await prisma.rfqBid.deleteMany()
+    await prisma.rfq.deleteMany()
+    await prisma.escrow.deleteMany()
+    await prisma.marketplaceReview.deleteMany()
+    await prisma.marketplaceLead.deleteMany()
+    await prisma.referralLead.deleteMany()
+    await prisma.quote.deleteMany()
+    await prisma.hakedis.deleteMany()
     await prisma.geofenceBreach.deleteMany()
     await prisma.geofenceMachine.deleteMany()
     await prisma.geofence.deleteMany()
@@ -123,6 +131,21 @@ async function main() {
         machines.push(machine)
     }
     console.log('✅ 10 makine oluşturuldu (3 GPS aktif)')
+
+    // ─── MARKETPLACE: birkaç müsait makineyi borsada ilana çıkar ──
+    await prisma.machine.update({ where: { id: machines[3].id }, data: { marketplaceListed: true, marketplaceFeatured: true, marketplaceCity: 'Ankara', marketplaceNote: 'Temiz, bakımlı. Operatörlü/operatörsüz verilir.' } })
+    await prisma.machine.update({ where: { id: machines[5].id }, data: { marketplaceListed: true, marketplaceCity: 'Ankara' } })
+    await prisma.machine.update({ where: { id: machines[8].id }, data: { marketplaceListed: true, marketplaceCity: 'Konya' } })
+    await prisma.marketplaceLead.create({
+        data: { ownerTenantId: tenant.id, machineId: machines[3].id, machineLabel: 'Komatsu PC200', requesterName: 'Demir İnşaat', requesterPhone: '0555 123 45 67', requesterCity: 'Ankara', message: '2 haftalık ekskavatör lazım, operatörlü.' },
+    })
+    console.log('✅ 3 makine borsada ilanda + 1 demo talep')
+
+    // ─── Demo RFQ (açık şantiye talebi) ──
+    await prisma.rfq.create({
+        data: { token: 'talepdemo', requesterName: 'Yıldırım Hafriyat', requesterPhone: '0532 999 88 77', city: 'Ankara', machineType: 'EKSAVATOR', periodType: 'GUNLUK', quantity: 10, operatorNeeded: true, description: "Etimesgut'ta 10 günlük ekskavatör, operatörlü." },
+    })
+    console.log('✅ Demo talep (/talep/talepdemo · /talepler ekranında görünür)')
 
     // ─── OPERATORS ─────────────────────────────────────────
     const operatorsData = [
@@ -526,6 +549,92 @@ async function main() {
         })
     }
     console.log('✅ 11 sistem bildirimi oluşturuldu (çeşitli tipler)')
+
+    // ─── DEMO HAKEDİŞ (GPS-doğrulamalı, müşteri onayına açık) ──────
+    // CAT 320F motor oturumları: 285+570+45 = 900 dk = 15 sa (doğrulanmış)
+    // Puantajda 18 sa beyan edilmiş → 3 saatlik fark = wedge demosu
+    const demoUnitPrice = 1200 // saatlik
+    const demoIgnition = 15
+    const demoManual = 18
+    const demoDeltaH = demoManual - demoIgnition
+    const demoSubtotal = demoUnitPrice * demoManual
+    const demoTax = demoSubtotal * 0.2
+    await prisma.hakedis.create({
+        data: {
+            tenantId: tenant.id,
+            rentalId: rentals[0].id,
+            machineId: machines[0].id,
+            customerId: customers[0].id,
+            operatorId: operators[0].id,
+            periodStart: new Date(now.getFullYear(), now.getMonth(), 1),
+            periodEnd: now,
+            periodLabel: `${new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString('tr-TR')} - ${now.toLocaleDateString('tr-TR')}`,
+            totalHours: demoManual,
+            workingDays: 0,
+            idleHours: 2.75,
+            unitPrice: demoUnitPrice,
+            periodType: 'SAATLIK',
+            subtotal: demoSubtotal,
+            taxRate: 20,
+            taxAmount: demoTax,
+            totalAmount: demoSubtotal + demoTax,
+            status: 'MUSTERI_ONAY_BEKLIYOR',
+            preparedBy: admin.name,
+            sentToCustomerAt: now,
+            customerToken: 'demo',
+            gpsReport: {
+                ignitionHours: demoIgnition,
+                estimatedIdleHours: 2.75,
+                estimatedWorkHours: 12.25,
+                manualHours: demoManual,
+                deltaHours: demoDeltaH,
+                deltaTL: demoDeltaH * demoUnitPrice,
+                sessionCount: 3,
+                unauthorizedCount: 0,
+                hasTelemetry: true,
+                generatedAt: now.toISOString(),
+            },
+            notes: 'CAT 320F — Etimesgut şantiyesi dönem hakedişi. Çalışma saati GPS ile doğrulanmıştır.',
+        },
+    })
+    console.log('✅ Demo hakediş oluşturuldu (portal linki: /portal/demo)')
+
+    // ─── DEMO TEKLİFLER (funnel) ───────────────────────────
+    const tk1sub = 9200 * 5, tk1tax = tk1sub * 0.2
+    await prisma.quote.create({
+        data: {
+            tenantId: tenant.id, customerId: customers[1].id, customerName: customers[1].companyName, customerPhone: customers[1].phone,
+            machineId: machines[5].id, machineType: 'DOZER', machineLabel: 'CAT D6T (06 MK 005)',
+            periodType: 'GUNLUK', unitPrice: 9200, quantity: 5, operatorIncluded: true,
+            taxRate: 20, subtotal: tk1sub, taxAmount: tk1tax, totalAmount: tk1sub + tk1tax,
+            status: 'GONDERILDI', token: 'teklifdemo',
+            validUntil: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7),
+            notes: 'Etimesgut yol projesi için dozer teklifi.',
+        },
+    })
+    const tk2sub = 6500 * 26, tk2tax = tk2sub * 0.2
+    await prisma.quote.create({
+        data: {
+            tenantId: tenant.id, customerId: customers[2].id, customerName: customers[2].companyName, customerPhone: customers[2].phone,
+            machineType: 'KEPCE', machineLabel: 'CAT 950H Kepçe',
+            periodType: 'GUNLUK', unitPrice: 6500, quantity: 26, operatorIncluded: false,
+            taxRate: 20, subtotal: tk2sub, taxAmount: tk2tax, totalAmount: tk2sub + tk2tax,
+            status: 'KIRALAMAYA_DONDU', token: null,
+            validUntil: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2),
+        },
+    })
+    console.log('✅ 2 demo teklif oluşturuldu (portal: /teklif/teklifdemo)')
+
+    // ─── SİSTEM SÜPER ADMIN (bayi/super-admin paneli için) ──────────
+    await prisma.tenant.upsert({
+        where: { id: 'system-admin' },
+        update: {},
+        create: { id: 'system-admin', name: 'Sistem Yönetimi', email: 'super@makinetakip.app' },
+    })
+    await prisma.user.create({
+        data: { tenantId: 'system-admin', email: 'super@makinetakip.app', password: hashedPassword, name: 'Süper Admin', role: 'ADMIN' },
+    })
+    console.log('✅ Süper admin: super@makinetakip.app / 123456')
 
     console.log('\n🎉 Seed tamamlandı!')
     console.log('─────────────────────────────────')

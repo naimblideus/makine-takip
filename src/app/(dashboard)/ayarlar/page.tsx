@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { Save, Building2, User, Shield, Palette, CheckCircle } from 'lucide-react'
+import { Save, Building2, User, Shield, Palette, CheckCircle, Bell } from 'lucide-react'
 
 export default function AyarlarPage() {
     const { data: session } = useSession()
@@ -27,6 +27,9 @@ export default function AyarlarPage() {
     // Şifre state
     const [sifre, setSifre] = useState({ current: '', newPass: '', confirm: '' })
 
+    // Alarm kanalı + KVKK state
+    const [bildirim, setBildirim] = useState({ alertPhone: '', alertWhatsapp: '', alertEmail: '', kvkkText: '' })
+
     const userName = session?.user?.name || 'Kullanıcı'
     const userEmail = session?.user?.email || ''
     const userRole = (session?.user as any)?.role || 'ADMIN'
@@ -45,6 +48,12 @@ export default function AyarlarPage() {
                         email: data.email || '',
                         address: data.address || '',
                     })
+                    setBildirim({
+                        alertPhone: data.alertPhone || '',
+                        alertWhatsapp: data.alertWhatsapp || '',
+                        alertEmail: data.alertEmail || '',
+                        kvkkText: data.kvkkText || '',
+                    })
                 }
             })
             .catch(console.error)
@@ -55,6 +64,7 @@ export default function AyarlarPage() {
 
     const tabs = [
         { id: 'firma', label: 'Firma Bilgileri', icon: <Building2 size={16} /> },
+        { id: 'bildirim', label: 'Alarm & KVKK', icon: <Bell size={16} /> },
         { id: 'profil', label: 'Profil', icon: <User size={16} /> },
         { id: 'guvenlik', label: 'Güvenlik', icon: <Shield size={16} /> },
         { id: 'gorunum', label: 'Görünüm', icon: <Palette size={16} /> },
@@ -68,6 +78,25 @@ export default function AyarlarPage() {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(firma),
+            })
+            if (!res.ok) throw new Error((await res.json()).error || 'Kaydetme başarısız')
+            setSaved(true)
+            setTimeout(() => setSaved(false), 2500)
+        } catch (err: any) {
+            setError(err.message)
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    async function handleSaveBildirim() {
+        setSaving(true)
+        setError('')
+        try {
+            const res = await fetch('/api/ayarlar', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...firma, ...bildirim }),
             })
             if (!res.ok) throw new Error((await res.json()).error || 'Kaydetme başarısız')
             setSaved(true)
@@ -205,6 +234,43 @@ export default function AyarlarPage() {
                                     </div>
                                 </>
                             )}
+                        </div>
+                    )}
+
+                    {/* Alarm & KVKK */}
+                    {activeTab === 'bildirim' && (
+                        <div className="card" style={{ padding: '1.5rem' }}>
+                            <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, marginBottom: '0.5rem' }}>🔔 Alarm Kanalı</h3>
+                            <p style={{ fontSize: '0.8125rem', color: '#64748b', marginBottom: '1rem' }}>
+                                Yakıt hırsızlığı, geofence ihlali ve yetkisiz kullanım alarmları bu kanallara anında gönderilir. Boş bırakılırsa yalnızca uygulama içi bildirim oluşur.
+                            </p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div>
+                                    <label className="label">Alarm SMS Numarası</label>
+                                    <input className="input" placeholder="0532 ..." value={bildirim.alertPhone} onChange={e => setBildirim({ ...bildirim, alertPhone: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label className="label">Alarm WhatsApp Numarası</label>
+                                    <input className="input" placeholder="0532 ..." value={bildirim.alertWhatsapp} onChange={e => setBildirim({ ...bildirim, alertWhatsapp: e.target.value })} />
+                                </div>
+                                <div style={{ gridColumn: 'span 2' }}>
+                                    <label className="label">Alarm E-posta</label>
+                                    <input className="input" type="email" placeholder="patron@firma.com" value={bildirim.alertEmail} onChange={e => setBildirim({ ...bildirim, alertEmail: e.target.value })} />
+                                </div>
+                            </div>
+
+                            <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, margin: '1.5rem 0 0.5rem' }}>📄 KVKK Aydınlatma Metni</h3>
+                            <p style={{ fontSize: '0.8125rem', color: '#64748b', marginBottom: '0.75rem' }}>
+                                GPS/konum ve operatör takibi kişisel veri işlemedir; KVKK aydınlatma yükümlülüğü vardır. Metniniz müşteri portalı ve operatör ekranında gösterilebilir.
+                            </p>
+                            <textarea className="input" rows={5} style={{ resize: 'vertical' }} placeholder="Şirketimiz, iş makinelerinin konum ve çalışma verilerini hizmet sunumu amacıyla işler..." value={bildirim.kvkkText} onChange={e => setBildirim({ ...bildirim, kvkkText: e.target.value })} />
+
+                            <div style={{ marginTop: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <a href="/kvkk" target="_blank" rel="noopener" style={{ fontSize: '0.8125rem', color: '#2563eb', fontWeight: 600 }}>KVKK metnini önizle →</a>
+                                <button className="btn btn-primary" onClick={handleSaveBildirim} disabled={saving}>
+                                    {saving ? 'Kaydediliyor...' : <><Save size={16} /> Kaydet</>}
+                                </button>
+                            </div>
                         </div>
                     )}
 

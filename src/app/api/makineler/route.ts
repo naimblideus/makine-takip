@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { checkMachineQuota } from '@/lib/subscription'
 
 export async function GET(req: NextRequest) {
     try {
@@ -68,6 +69,13 @@ export async function POST(req: NextRequest) {
         }
 
         const tenantId = (session.user as any).tenantId
+
+        // Abonelik paywall — makine limiti / trial kontrolü
+        const quota = await checkMachineQuota(tenantId)
+        if (!quota.ok) {
+            return NextResponse.json({ error: quota.reason, paywall: true }, { status: 403 })
+        }
+
         const body = await req.json()
 
         const machine = await prisma.machine.create({

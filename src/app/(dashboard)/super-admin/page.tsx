@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import {
     Shield, Building2, Users, Truck, Plus, X, CheckCircle,
-    Edit, Trash2, Power, Globe, BarChart3, Key
+    Edit, Trash2, Power, Globe, BarChart3, Key, Wallet
 } from 'lucide-react'
+import { formatCurrency } from '@/lib/utils'
 
 const ROLE_LABEL: Record<string, string> = {
     ADMIN: 'Yönetici',
@@ -16,7 +17,9 @@ const ROLE_LABEL: Record<string, string> = {
 export default function SuperAdminPage() {
     const { data: session } = useSession()
     const [tenants, setTenants] = useState<any[]>([])
+    const [dealers, setDealers] = useState<any[]>([])
     const [stats, setStats] = useState<any>(null)
+    const [revenue, setRevenue] = useState<any>(null)
     const [loading, setLoading] = useState(true)
     const [showForm, setShowForm] = useState(false)
     const [editId, setEditId] = useState<string | null>(null)
@@ -38,8 +41,11 @@ export default function SuperAdminPage() {
             if (res.ok) {
                 const d = await res.json()
                 setTenants(d.tenants || [])
+                setDealers(d.dealers || [])
                 setStats(d.stats)
             }
+            const rev = await fetch('/api/admin/pazar-gelir')
+            if (rev.ok) setRevenue(await rev.json())
         } catch { }
         setLoading(false)
     }
@@ -83,6 +89,14 @@ export default function SuperAdminPage() {
     const deleteTenant = async (id: string) => {
         if (!confirm('Bu işletmeyi ve TÜM verilerini silmek istediğinize emin misiniz?')) return
         await fetch(`/api/admin/tenants?id=${id}`, { method: 'DELETE' })
+        load()
+    }
+
+    const assignDealer = async (tenantId: string, dealerId: string) => {
+        await fetch('/api/admin/tenants', {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: tenantId, dealerId }),
+        })
         load()
     }
 
@@ -172,6 +186,36 @@ export default function SuperAdminPage() {
                 </div>
             )}
 
+            {/* Platform Geliri & Pazar */}
+            {revenue && (
+                <div className="card" style={{ marginBottom: '1.5rem', padding: '1.5rem', background: 'linear-gradient(135deg,#0f172a,#1e3a8a)', color: '#fff', border: 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
+                        <Wallet size={20} /> <h2 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>Platform Geliri & Pazar</h2>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))', gap: '1rem' }}>
+                        {[
+                            { l: 'Aylık Tekrarlayan (MRR+Reklam)', v: formatCurrency(revenue.platformMonthly), sub: `Abonelik ${formatCurrency(revenue.mrr)} + Reklam ${formatCurrency(revenue.adRevenue)}`, hi: true },
+                            { l: 'Komisyon Kazancı (toplam)', v: formatCurrency(revenue.commissionTotal), sub: `Tahsil edilen ${formatCurrency(revenue.releasedCommission)}` },
+                            { l: 'GMV (işlem hacmi)', v: formatCurrency(revenue.gmv), sub: `${revenue.rfq.closed} kapanan talep` },
+                            { l: 'Emanet Float (tutulan)', v: formatCurrency(revenue.float), sub: 'serbest bırakılmayı bekliyor' },
+                        ].map((k, i) => (
+                            <div key={i} style={{ background: k.hi ? 'rgba(34,197,94,0.18)' : 'rgba(255,255,255,0.08)', borderRadius: '0.75rem', padding: '1rem', border: k.hi ? '1px solid rgba(34,197,94,0.5)' : '1px solid rgba(255,255,255,0.1)' }}>
+                                <div style={{ fontSize: '0.72rem', opacity: 0.8 }}>{k.l}</div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: 800, margin: '0.2rem 0' }}>{k.v}</div>
+                                <div style={{ fontSize: '0.68rem', opacity: 0.65 }}>{k.sub}</div>
+                            </div>
+                        ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginTop: '1.25rem', fontSize: '0.82rem', opacity: 0.92 }}>
+                        <span>📋 {revenue.rfq.total} talep · {revenue.rfq.open} açık · {revenue.rfq.bids} teklif</span>
+                        <span>🎯 dönüşüm %{revenue.rfq.conversion}</span>
+                        <span>★ {revenue.featuredCount} sponsorlu ilan</span>
+                        {revenue.reputation?.avg && <span>⭐ ort. {revenue.reputation.avg} ({revenue.reputation.count} değerlendirme)</span>}
+                        <span>👥 {revenue.payingTenants} ödeyen firma</span>
+                    </div>
+                </div>
+            )}
+
             {/* Form */}
             {showForm && (
                 <div className="card animate-slide-up" style={{ marginBottom: '1.5rem', padding: '1.5rem' }}>
@@ -256,6 +300,7 @@ export default function SuperAdminPage() {
                                 <th>MAKİNE</th>
                                 <th>KİRALAMA</th>
                                 <th>MÜŞTERİ</th>
+                                <th>BAYİ</th>
                                 <th>ADMIN</th>
                                 <th>İŞLEM</th>
                             </tr>
@@ -274,6 +319,17 @@ export default function SuperAdminPage() {
                                     <td style={{ fontWeight: 600 }}>{t._count?.machines || 0}</td>
                                     <td>{t._count?.rentals || 0}</td>
                                     <td>{t._count?.customers || 0}</td>
+                                    <td>
+                                        <select
+                                            className="input"
+                                            style={{ fontSize: '0.75rem', padding: '0.2rem 0.4rem', minWidth: 120 }}
+                                            value={t.dealerId || ''}
+                                            onChange={e => assignDealer(t.id, e.target.value)}
+                                        >
+                                            <option value="">— Bayi yok —</option>
+                                            {dealers.map(dl => <option key={dl.id} value={dl.id}>{dl.name}</option>)}
+                                        </select>
+                                    </td>
                                     <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                         {t.users?.[0]?.email || '—'}
                                     </td>
@@ -291,7 +347,7 @@ export default function SuperAdminPage() {
                             ))}
                             {tenants.length === 0 && (
                                 <tr>
-                                    <td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>
+                                    <td colSpan={9} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '3rem' }}>
                                         Henüz işletme yok. Yeni işletme ekleyin.
                                     </td>
                                 </tr>

@@ -67,6 +67,43 @@ export function calculateUtilizationRate(sessions: SessionData[], periodDays: nu
     return Math.min(Math.round(rate * 10) / 10, 100)
 }
 
+// ─── Oturum Metrikleri — gerçek pozisyon geçmişinden idle/work ──────────
+// idle/work artık SABİT katsayı değil; gerçek hız örneklerinden türetilir.
+// Hız < eşik (ve hareket yok) = rölanti (idle); aksi = çalışma (work).
+const IDLE_SPEED_KMH = 3
+
+interface PosSample {
+    speed?: number | null
+    attributes?: { ignition?: boolean; motion?: boolean } | null
+}
+
+export function computeSessionMetrics(positions: PosSample[], durationMinutes: number): {
+    idleMinutes: number | null
+    workMinutes: number | null
+    avgSpeed: number | null
+    maxSpeed: number | null
+} {
+    const valid = positions.filter(p => typeof p?.speed === 'number')
+    if (valid.length === 0) {
+        // Veri yok → uydurma yapma, bilinmiyor olarak bırak
+        return { idleMinutes: null, workMinutes: null, avgSpeed: null, maxSpeed: null }
+    }
+    let idleSamples = 0, workSamples = 0, speedSum = 0, maxSpeed = 0
+    for (const p of valid) {
+        const s = Number(p.speed) || 0
+        speedSum += s
+        if (s > maxSpeed) maxSpeed = s
+        const moving = s >= IDLE_SPEED_KMH || p.attributes?.motion === true
+        if (moving) workSamples++; else idleSamples++
+    }
+    const total = idleSamples + workSamples
+    const idleRatio = total > 0 ? idleSamples / total : 0
+    const idleMinutes = Math.round(durationMinutes * idleRatio)
+    const workMinutes = Math.max(0, durationMinutes - idleMinutes)
+    const avgSpeed = Math.round((speedSum / valid.length) * 10) / 10
+    return { idleMinutes, workMinutes, avgSpeed, maxSpeed: Math.round(maxSpeed) }
+}
+
 // ─── Yakıt Hırsızlığı Tespiti ──────────────────────────
 
 interface FuelTheftResult {

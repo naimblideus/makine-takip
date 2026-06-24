@@ -9,6 +9,7 @@ import {
     Clock,
     Calendar,
     AlertCircle,
+    QrCode,
 } from 'lucide-react'
 import { formatCurrency, cn } from '@/lib/utils'
 import {
@@ -175,10 +176,17 @@ export default function MakinelerPage() {
                                             {machine.year && ` · ${machine.year}`}
                                         </div>
                                     </div>
-                                    <span className={cn('badge', statusColor?.bg, statusColor?.text)}>
-                                        <span className={cn('badge-dot', statusColor?.dot)} />
-                                        {MACHINE_STATUS_LABELS[machine.status as keyof typeof MACHINE_STATUS_LABELS]}
-                                    </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                        <button type="button" title="QR Kartı (yazdır & yapıştır)"
+                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(`/m/${machine.id}`, '_blank') }}
+                                            style={{ background: '#f1f5f9', border: 'none', borderRadius: 6, padding: '0.3rem', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                                            <QrCode size={15} color="#475569" />
+                                        </button>
+                                        <span className={cn('badge', statusColor?.bg, statusColor?.text)}>
+                                            <span className={cn('badge-dot', statusColor?.dot)} />
+                                            {MACHINE_STATUS_LABELS[machine.status as keyof typeof MACHINE_STATUS_LABELS]}
+                                        </span>
+                                    </div>
                                 </div>
 
                                 {/* Plaka / Seri No */}

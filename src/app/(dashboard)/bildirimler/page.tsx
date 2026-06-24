@@ -26,7 +26,12 @@ export default function BildirimlerPage() {
     useEffect(() => { load() }, [])
 
     if (loading || !data) return <div className="spinner" style={{ margin: '3rem auto' }} />
-    const { notifications = [], counts } = data
+    const { notifications = [] } = data
+    const counts = {
+        kritik: notifications.filter((n: any) => n.priority === 'KRITIK').length,
+        uyari: notifications.filter((n: any) => n.priority === 'UYARI').length,
+        bilgi: notifications.filter((n: any) => n.priority === 'BILGI').length,
+    }
     const filtered = filter === 'TUMU' ? notifications : notifications.filter((n: any) => n.priority === filter)
 
     return (
@@ -68,7 +73,7 @@ export default function BildirimlerPage() {
                     {filtered.map((n: any) => {
                         const pc = PRIORITY_CONFIG[n.priority] || PRIORITY_CONFIG.BILGI
                         return (
-                            <Link key={n.id} href={n.href} style={{ textDecoration: 'none', color: 'inherit' }}>
+                            <Link key={n.id} href={n.href || '#'} style={{ textDecoration: 'none', color: 'inherit' }}>
                                 <div style={{ background: '#fff', border: `1px solid ${pc.border}`, borderLeft: `4px solid ${pc.color}`, borderRadius: '0.75rem', padding: '1rem 1.25rem', display: 'flex', alignItems: 'flex-start', gap: '1rem', transition: 'box-shadow 0.15s', cursor: 'pointer' }}
                                     onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.1)')}
                                     onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}>
