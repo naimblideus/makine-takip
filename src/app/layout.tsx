@@ -2,9 +2,45 @@ import type { Metadata } from 'next'
 import './globals.css'
 import Providers from '@/components/Providers'
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://makinetakip.app'
+
 export const metadata: Metadata = {
-  title: 'Makine Takip - İş Makinesi Kiralama Yönetim Sistemi',
+  metadataBase: new URL(appUrl),
+  title: {
+    default: 'Makine Takip - İş Makinesi Kiralama Yönetim Sistemi',
+    template: '%s · Makine Takip',
+  },
   description: 'İş makinesi kiralama firmalarına özel, modern ve kullanımı kolay filo yönetim yazılımı.',
+  keywords: [
+    'iş makinesi kiralama',
+    'hakediş',
+    'GPS filo',
+    'iş makinesi takip',
+    'filo yönetimi',
+    'ekskavatör kiralama yazılımı',
+    'kiralama yönetim sistemi',
+  ],
+  openGraph: {
+    title: 'Makine Takip - İş Makinesi Kiralama Yönetim Sistemi',
+    description: 'İş makinesi kiralama firmalarına özel, modern ve kullanımı kolay filo yönetim yazılımı.',
+    type: 'website',
+    locale: 'tr_TR',
+    siteName: 'Makine Takip',
+    url: appUrl,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Makine Takip - İş Makinesi Kiralama Yönetim Sistemi',
+    description: 'İş makinesi kiralama firmalarına özel, modern ve kullanımı kolay filo yönetim yazılımı.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
+  },
 }
 
 export default function RootLayout({

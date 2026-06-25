@@ -198,6 +198,7 @@ model User {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("users")
+  @@index([tenantId, isActive])
 }
 
 model Machine {
@@ -261,6 +262,7 @@ model Machine {
   amortization         MachineAmortization?
 
   @@map("machines")
+  @@index([tenantId, status])
 }
 
 model Operator {
@@ -288,6 +290,7 @@ model Operator {
   scores         OperatorScore[]
 
   @@map("operators")
+  @@index([tenantId, isActive])
 }
 
 model Customer {
@@ -318,6 +321,7 @@ model Customer {
   quotes       Quote[]
 
   @@map("customers")
+  @@index([tenantId])
 }
 
 model Site {
@@ -345,6 +349,7 @@ model Site {
   geofences Geofence[]
 
   @@map("sites")
+  @@index([tenantId, customerId])
 }
 
 model Rental {
@@ -393,6 +398,8 @@ model Rental {
   hakedisler     Hakedis[]
 
   @@map("rentals")
+  @@index([tenantId, status])
+  @@index([tenantId, machineId])
 }
 
 model Contract {
@@ -445,6 +452,7 @@ model FuelEntry {
   machine Machine @relation(fields: [machineId], references: [id])
 
   @@map("fuel_entries")
+  @@index([tenantId, machineId, date])
 }
 
 model Maintenance {
@@ -470,6 +478,7 @@ model Maintenance {
   machine Machine @relation(fields: [machineId], references: [id])
 
   @@map("maintenances")
+  @@index([tenantId, machineId, performedAt])
 }
 
 model Invoice {
@@ -516,6 +525,8 @@ model Invoice {
   payments Payment[]
 
   @@map("invoices")
+  @@index([tenantId, status])
+  @@index([tenantId, dueDate])
 }
 
 model Payment {
@@ -541,6 +552,8 @@ model Payment {
   invoice Invoice @relation(fields: [invoiceId], references: [id])
 
   @@map("payments")
+  @@index([tenantId, status])
+  @@index([tenantId, invoiceId])
 }
 
 model Timesheet {
@@ -560,6 +573,7 @@ model Timesheet {
   rental   Rental?  @relation(fields: [rentalId], references: [id])
 
   @@map("timesheets")
+  @@index([tenantId, operatorId, date])
 }
 
 // ─── GPS & TELEMETRİ MODELLERİ ──────────────────────────
@@ -582,6 +596,7 @@ model GpsLog {
   machine Machine @relation(fields: [machineId], references: [id], onDelete: Cascade)
 
   @@map("gps_logs")
+  @@index([tenantId, machineId, createdAt])
 }
 
 model EngineSession {
@@ -609,6 +624,7 @@ model EngineSession {
   operator Operator? @relation(fields: [operatorId], references: [id])
 
   @@map("engine_sessions")
+  @@index([tenantId, machineId, startedAt])
 }
 
 model Geofence {
@@ -629,6 +645,7 @@ model Geofence {
   breaches         GeofenceBreach[]
 
   @@map("geofences")
+  @@index([tenantId, isActive])
 }
 
 model GeofenceMachine {
@@ -661,6 +678,7 @@ model GeofenceBreach {
   machine  Machine  @relation(fields: [machineId], references: [id], onDelete: Cascade)
 
   @@map("geofence_breaches")
+  @@index([tenantId, machineId, createdAt])
 }
 
 model FuelTheftAlert {
@@ -682,6 +700,7 @@ model FuelTheftAlert {
   machine Machine @relation(fields: [machineId], references: [id], onDelete: Cascade)
 
   @@map("fuel_theft_alerts")
+  @@index([tenantId, machineId, isResolved])
 }
 
 model SystemNotification {
@@ -699,6 +718,7 @@ model SystemNotification {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("system_notifications")
+  @@index([tenantId, isRead, createdAt])
 }
 
 // ─── YENİ MODELLER — MASTER PROMPT FAZ 1+ ────────────────
@@ -760,6 +780,7 @@ model Hakedis {
   customer Customer @relation(fields: [customerId], references: [id])
 
   @@map("hakedisler")
+  @@index([tenantId, status])
 }
 
 model Document {
@@ -782,6 +803,7 @@ model Document {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("documents")
+  @@index([tenantId, expiryDate])
 }
 
 model MaintenanceSchedule {
@@ -805,6 +827,7 @@ model MaintenanceSchedule {
   machine Machine @relation(fields: [machineId], references: [id], onDelete: Cascade)
 
   @@map("maintenance_schedules")
+  @@index([tenantId, nextDueDate])
 }
 
 model PricingRule {
@@ -895,6 +918,7 @@ model IncomeExpense {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("income_expenses")
+  @@index([tenantId, date])
 }
 
 model MachineAmortization {
@@ -1048,6 +1072,7 @@ model Quote {
   customer Customer? @relation(fields: [customerId], references: [id])
 
   @@map("quotes")
+  @@index([tenantId, status])
 }
 
 // ─── MARKETPLACE — Kiralama Borsası talep kaydı ──────────
