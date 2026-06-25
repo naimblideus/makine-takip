@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 import { checkMachineQuota } from '@/lib/subscription'
+import { parseBody, MachineCreateSchema } from '@/lib/schemas'
 
 export async function GET(req: NextRequest) {
     try {
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: quota.reason, paywall: true }, { status: 403 })
         }
 
-        const body = await req.json()
+        const _p = parseBody(MachineCreateSchema, await req.json().catch(() => null)); if (!_p.ok) return NextResponse.json({ error: _p.error }, { status: 400 }); const body = _p.data as any
 
         const machine = await prisma.machine.create({
             data: {

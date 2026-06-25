@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { parseBody, OperatorCreateSchema } from '@/lib/schemas'
 
 export async function GET(req: NextRequest) {
     try {
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
         if (!session?.user) return NextResponse.json({ error: 'Oturum gerekli' }, { status: 401 })
 
         const tenantId = (session.user as any).tenantId
-        const body = await req.json()
+        const _p = parseBody(OperatorCreateSchema, await req.json().catch(() => null)); if (!_p.ok) return NextResponse.json({ error: _p.error }, { status: 400 }); const body = _p.data as any
 
         const operator = await prisma.operator.create({
             data: {

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { v4 as uuidv4 } from 'uuid'
 import { getTelemetryHours, buildGpsReport } from '@/lib/hakedis-telemetry'
 import { toMoney, taxOf } from '@/lib/calc'
+import { parseBody, HakedisCreateSchema } from '@/lib/schemas'
 
 export async function GET(req: NextRequest) {
     const session = await auth()
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
     if (!session) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
     const tenantId = (session.user as any).tenantId
 
-    const body = await req.json()
+    const _p = parseBody(HakedisCreateSchema, await req.json().catch(() => null)); if (!_p.ok) return NextResponse.json({ error: _p.error }, { status: 400 }); const body = _p.data as any
     const {
         rentalId, periodStart, periodEnd, periodLabel,
         totalHours, workingDays, idleHours, overtimeHours,

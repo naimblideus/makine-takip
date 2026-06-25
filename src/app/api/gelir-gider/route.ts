@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { parseBody, GelirGiderCreateSchema } from '@/lib/schemas'
 
 export async function GET(req: NextRequest) {
     const session = await auth()
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
     if (!session) return NextResponse.json({ error: 'Yetkisiz' }, { status: 401 })
     const tenantId = (session.user as any).tenantId
 
-    const body = await req.json()
+    const _p = parseBody(GelirGiderCreateSchema, await req.json().catch(() => null)); if (!_p.ok) return NextResponse.json({ error: _p.error }, { status: 400 }); const body = _p.data as any
     const { type, category, description, amount, date, machineId, customerId, invoiceId, paymentMethod, reference, notes } = body
 
     const entry = await prisma.incomeExpense.create({
