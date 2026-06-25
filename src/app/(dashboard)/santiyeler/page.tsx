@@ -20,8 +20,8 @@ export default function SantiyelerPage() {
     useEffect(() => {
         fetch('/api/santiyeler')
             .then((res) => res.json())
-            .then(setSites)
-            .catch(console.error)
+            .then((d) => setSites(Array.isArray(d) ? d : []))
+            .catch(() => setSites([]))
             .finally(() => setLoading(false))
     }, [])
 

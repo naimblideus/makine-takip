@@ -15,8 +15,8 @@ export default function YeniOdemePage() {
     const [selectedCustomer, setSelectedCustomer] = useState('')
 
     useEffect(() => {
-        fetch('/api/musteriler').then(r => r.json()).then(d => setCustomers(Array.isArray(d) ? d : []))
-        fetch('/api/faturalar').then(r => r.json()).then(setInvoices)
+        fetch('/api/musteriler').then(r => r.json()).then(d => setCustomers(Array.isArray(d) ? d : [])).catch(() => setCustomers([]))
+        fetch('/api/faturalar').then(r => r.json()).then(d => setInvoices(Array.isArray(d) ? d : [])).catch(() => setInvoices([]))
     }, [])
 
     const customerInvoices = Array.isArray(invoices) ? invoices.filter((inv: any) => inv.customerId === selectedCustomer) : []

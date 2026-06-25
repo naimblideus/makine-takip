@@ -131,6 +131,7 @@ export default function BakimTakvimiPage() {
                                 </tr>
                             )
                         })}
+                        {schedules.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', color: '#94a3b8', padding: '3rem' }}>Bakım planı yok</td></tr>}
                     </tbody>
                 </table>
             </div>

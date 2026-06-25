@@ -47,7 +47,7 @@ export default function KiralamalarPage() {
 
         fetch(`/api/kiralamalar?${params}`)
             .then((res) => res.json())
-            .then(setRentals)
+            .then((d) => setRentals(Array.isArray(d) ? d : []))
             .catch(console.error)
             .finally(() => setLoading(false))
     }, [statusFilter, search])

@@ -48,7 +48,7 @@ export default function MusteriCRMPage() {
     }
 
     if (loading) return <div className="spinner" style={{ margin: '3rem auto' }} />
-    if (!data) return <div className="alert alert-danger">Veriler yüklenemedi</div>
+    if (!data || data.error) return <div className="alert alert-danger">Veriler yüklenemedi</div>
 
     const { customers = [], tierCounts = {}, topCustomers = [] } = data
 

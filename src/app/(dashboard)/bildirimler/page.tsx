@@ -25,8 +25,8 @@ export default function BildirimlerPage() {
     }
     useEffect(() => { load() }, [])
 
-    if (loading || !data) return <div className="spinner" style={{ margin: '3rem auto' }} />
-    const { notifications = [] } = data
+    if (loading || !data || data.error) return <div className="spinner" style={{ margin: '3rem auto' }} />
+    const notifications = Array.isArray(data.notifications) ? data.notifications : []
     const counts = {
         kritik: notifications.filter((n: any) => n.priority === 'KRITIK').length,
         uyari: notifications.filter((n: any) => n.priority === 'UYARI').length,

@@ -38,7 +38,8 @@ export default function AiOnerilerPage() {
     useEffect(() => { load() }, [])
 
     if (loading) return <div className="spinner" style={{ margin: '3rem auto' }} />
-    const { suggestions = [], generatedAt } = data || {}
+    const { generatedAt } = data || {}
+    const suggestions = Array.isArray(data?.suggestions) ? data.suggestions : []
 
     return (
         <div>

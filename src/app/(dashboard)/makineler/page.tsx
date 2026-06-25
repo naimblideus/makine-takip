@@ -58,7 +58,7 @@ export default function MakinelerPage() {
 
         fetch(`/api/makineler?${params}`)
             .then((res) => res.json())
-            .then(setMachines)
+            .then((d) => setMachines(Array.isArray(d) ? d : []))
             .catch(console.error)
             .finally(() => setLoading(false))
     }, [statusFilter, search])

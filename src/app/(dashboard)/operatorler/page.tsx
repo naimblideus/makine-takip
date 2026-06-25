@@ -33,8 +33,8 @@ export default function OperatorlerPage() {
 
         fetch(`/api/operatorler?${params}`)
             .then((res) => res.json())
-            .then(setOperators)
-            .catch(console.error)
+            .then((d) => setOperators(Array.isArray(d) ? d : []))
+            .catch(() => setOperators([]))
             .finally(() => setLoading(false))
     }, [search])
 

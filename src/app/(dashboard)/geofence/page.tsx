@@ -30,8 +30,8 @@ export default function GeofencePage() {
                 fetch('/api/makineler?gpsOnly=true'),
                 fetch('/api/santiyeler'),
             ])
-            if (gRes.ok) setGeofences(await gRes.json())
-            if (mRes.ok) setMachines(await mRes.json())
+            if (gRes.ok) { const gData = await gRes.json(); setGeofences(Array.isArray(gData) ? gData : gData.data || []) }
+            if (mRes.ok) { const mData = await mRes.json(); setMachines(Array.isArray(mData) ? mData : mData.data || []) }
             if (sRes.ok) {
                 const sData = await sRes.json()
                 setSites(Array.isArray(sData) ? sData : sData.data || [])

@@ -27,10 +27,10 @@ export default function YeniKiralamaPage() {
             fetch('/api/musteriler').then(r => r.json()),
             fetch('/api/operatorler').then(r => r.json()),
         ]).then(([m, c, o]) => {
-            setMachines(m)
-            setCustomers(c)
-            setOperators(o)
-        })
+            setMachines(Array.isArray(m) ? m : [])
+            setCustomers(Array.isArray(c) ? c : [])
+            setOperators(Array.isArray(o) ? o : [])
+        }).catch(() => { setMachines([]); setCustomers([]); setOperators([]) })
     }, [])
 
     // Müşteri seçilince şantiyeleri getir
@@ -38,7 +38,7 @@ export default function YeniKiralamaPage() {
         if (selectedCustomer) {
             fetch(`/api/santiyeler?customerId=${selectedCustomer}`)
                 .then(r => r.json())
-                .then(setSites)
+                .then(d => setSites(Array.isArray(d) ? d : []))
                 .catch(() => setSites([]))
         } else {
             setSites([])

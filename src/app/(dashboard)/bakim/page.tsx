@@ -13,8 +13,8 @@ export default function BakimPage() {
     useEffect(() => {
         fetch('/api/bakim')
             .then((res) => res.json())
-            .then(setRecords)
-            .catch(console.error)
+            .then((d) => setRecords(Array.isArray(d) ? d : (d.items || [])))
+            .catch(() => setRecords([]))
             .finally(() => setLoading(false))
     }, [])
 

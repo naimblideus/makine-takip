@@ -33,8 +33,8 @@ export default function MusterilerPage() {
 
         fetch(`/api/musteriler?${params}`)
             .then((res) => res.json())
-            .then(setCustomers)
-            .catch(console.error)
+            .then((d) => setCustomers(Array.isArray(d) ? d : []))
+            .catch(() => setCustomers([]))
             .finally(() => setLoading(false))
     }, [search, tab])
 

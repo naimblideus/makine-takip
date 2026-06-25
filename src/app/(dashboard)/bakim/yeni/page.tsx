@@ -13,7 +13,7 @@ export default function YeniBakimPage() {
     const [machines, setMachines] = useState<any[]>([])
 
     useEffect(() => {
-        fetch('/api/makineler').then(r => r.json()).then(setMachines)
+        fetch('/api/makineler').then(r => r.json()).then(d => setMachines(Array.isArray(d) ? d : (d.makineler || []))).catch(() => setMachines([]))
     }, [])
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {

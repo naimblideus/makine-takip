@@ -54,6 +54,16 @@ export const QuoteCreateSchema = z.object({
     notes: optStr(1000),
 })
 
+export const FaturaCreateSchema = z.object({
+    customerId: z.string().uuid('Müşteri seçilmeli'),
+    rentalId: z.string().uuid().optional().or(z.literal('')).transform(v => v || undefined),
+    issueDate: z.string().min(1, 'Düzenleme tarihi zorunlu'),
+    dueDate: z.string().min(1, 'Vade tarihi zorunlu'),
+    subtotal: z.coerce.number().positive('Ara toplam pozitif olmalı'),
+    taxRate: z.coerce.number().min(0).max(100).default(20),
+    notes: optStr(1000),
+})
+
 /** safeParse + Türkçe ilk hata mesajı döner. */
 export function parseBody<T>(schema: z.ZodType<T>, body: unknown): { ok: true; data: T } | { ok: false; error: string } {
     const r = schema.safeParse(body)
