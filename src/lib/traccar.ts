@@ -224,6 +224,17 @@ export async function assignGeofenceToDevice(deviceId: string, geofenceId: numbe
 }
 
 /**
+ * Bağlantı testi — Traccar /server ucuyla URL+kimlik doğrular
+ */
+export async function testTraccar(): Promise<{ ok: boolean; info: string }> {
+    if (IS_MOCK) return { ok: false, info: 'Traccar sunucusu/kimlik girilmemiş (mock GPS)' }
+    try {
+        const server = await traccarFetch('/server')
+        return { ok: true, info: `Traccar bağlandı ✓ (v${server?.version || '?'})` }
+    } catch (e: any) { return { ok: false, info: e?.message || 'Bağlantı hatası' } }
+}
+
+/**
  * Traccar mock durumunu kontrol et
  */
 export function isTraccarMock(): boolean {

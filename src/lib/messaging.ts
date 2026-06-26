@@ -113,6 +113,33 @@ export async function notifyCustomer(
     return out
 }
 
+// ─── Bağlantı testleri (kredi/erişim kontrolü; MESAJ GÖNDERMEZ, spam yok) ────
+export async function testSmsConn(): Promise<{ ok: boolean; info: string }> {
+    if (SMS_MOCK) return { ok: false, info: 'NetGSM anahtarı girilmemiş (mock)' }
+    try {
+        const params = new URLSearchParams({ usercode: NETGSM_USERCODE, password: NETGSM_PASSWORD })
+        const res = await fetch(`https://api.netgsm.com.tr/balance/list/get/?${params}`)
+        const body = (await res.text()).trim()
+        // Hata kodları (30/40/60/70/80...) ile baslarsa basarisiz; aksi halde bakiye doner
+        const ok = res.ok && !/^\s*(30|40|60|70|80)\b/.test(body)
+        return { ok, info: ok ? `NetGSM bağlandı ✓ (${body.slice(0, 40)})` : `NetGSM kodu: ${body.slice(0, 40)}` }
+    } catch (e: any) { return { ok: false, info: e?.message || 'Bağlantı hatası' } }
+}
+export async function testEmailConn(): Promise<{ ok: boolean; info: string }> {
+    if (MAIL_MOCK) return { ok: false, info: 'Resend anahtarı girilmemiş (mock)' }
+    try {
+        const res = await fetch('https://api.resend.com/domains', { headers: { Authorization: `Bearer ${RESEND_API_KEY}` } })
+        return { ok: res.ok, info: res.ok ? 'Resend bağlandı ✓' : `http ${res.status} — anahtar kontrolü` }
+    } catch (e: any) { return { ok: false, info: e?.message || 'Bağlantı hatası' } }
+}
+export async function testWhatsAppConn(): Promise<{ ok: boolean; info: string }> {
+    if (WA_MOCK) return { ok: false, info: 'WhatsApp token girilmemiş (mock)' }
+    try {
+        const res = await fetch(`https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_ID}?fields=display_phone_number`, { headers: { Authorization: `Bearer ${WHATSAPP_TOKEN}` } })
+        return { ok: res.ok, info: res.ok ? 'WhatsApp Cloud bağlandı ✓' : `http ${res.status} — token/phone-id kontrolü` }
+    } catch (e: any) { return { ok: false, info: e?.message || 'Bağlantı hatası' } }
+}
+
 export function channelStatus() {
     return { smsMock: SMS_MOCK, mailMock: MAIL_MOCK, whatsappMock: WA_MOCK }
 }

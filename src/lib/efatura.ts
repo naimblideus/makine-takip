@@ -91,6 +91,17 @@ function integratorBaseUrl(): string {
     }
 }
 
+/** Bağlantı testi — entegratör ucuna erişim + kimlik kontrolü */
+export async function testEfatura(): Promise<{ ok: boolean; info: string }> {
+    if (IS_MOCK) return { ok: false, info: 'e-Fatura entegratörü girilmemiş (mock)' }
+    try {
+        const res = await fetch(integratorBaseUrl(), { method: 'GET', headers: { Authorization: `Bearer ${API_KEY}`, 'X-User': USERNAME } })
+        // 200/401/403 → uç erişilebilir (kimlik ayrı); 5xx/ağ → sorun
+        const reachable = res.status < 500
+        return { ok: res.ok, info: res.ok ? `${PROVIDER} bağlandı ✓` : reachable ? `${PROVIDER} erişilebilir, kimlik kontrolü (http ${res.status})` : `http ${res.status}` }
+    } catch (e: any) { return { ok: false, info: e?.message || 'Bağlantı hatası' } }
+}
+
 export function efaturaChannelStatus() {
     return { mock: IS_MOCK, provider: PROVIDER || 'mock' }
 }

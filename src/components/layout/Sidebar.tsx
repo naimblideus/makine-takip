@@ -11,7 +11,7 @@ import {
     MapPin, Hexagon, Bell, Shield, FileText, Warehouse,
     Trophy, Calendar, DollarSign, Brain, Tag,
     ArrowLeftRight, TrendingDown, Map, Smartphone, Sparkles, Store,
-    ShieldAlert, Gauge, FileSignature, Landmark, Inbox, ChevronDown, SlidersHorizontal,
+    ShieldAlert, Gauge, FileSignature, Landmark, Inbox, ChevronDown, SlidersHorizontal, Plug,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -213,6 +213,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         >
                             <Settings size={18} />
                             <span>Ayarlar</span>
+                        </Link>
+                        <Link
+                            href="/entegrasyonlar"
+                            className={cn('sidebar-link', pathname.startsWith('/entegrasyonlar') && 'sidebar-link-active')}
+                            onClick={closeOnMobile}
+                        >
+                            <Plug size={18} />
+                            <span>Entegrasyonlar</span>
                         </Link>
                         {isSuperAdmin && (
                             <Link
