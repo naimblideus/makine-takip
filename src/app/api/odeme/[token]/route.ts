@@ -46,6 +46,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     }
 
     await prisma.$transaction(async (tx) => {
+        // Atomik compare-and-set — eşzamanlı/tekrarlı onayda çift Payment'i önler
+        const flipped = await tx.invoice.updateMany({
+            where: { id: invoice.id, status: { not: 'ODENDI' } },
+            data: { status: 'ODENDI', providerStatus: 'ODENDI' },
+        })
+        if (flipped.count === 0) return // zaten ödendi → idempotent
         await tx.payment.create({
             data: {
                 tenantId: invoice.tenantId, invoiceId: invoice.id,
@@ -54,7 +60,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
                 notes: 'Online ödeme (kredi kartı)',
             },
         })
-        await tx.invoice.update({ where: { id: invoice.id }, data: { status: 'ODENDI', providerStatus: 'ODENDI' } })
     })
 
     return NextResponse.json({ success: true })

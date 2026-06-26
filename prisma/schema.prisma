@@ -1194,3 +1194,21 @@ model MarketplaceReview {
 
   @@map("marketplace_reviews")
 }
+
+// ─── Denetim İzi (admin/hassas işlemler) ────────────────
+model AuditLog {
+  id         String   @id @default(uuid())
+  tenantId   String?  @map("tenant_id") // etkilenen tenant (null = platform)
+  actorId    String   @map("actor_id") // işlemi yapan kullanıcı
+  actorEmail String   @map("actor_email")
+  action     String // örn: tenant.create, dealer.delete
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  detail     String?
+  ip         String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, createdAt])
+  @@index([actorId, createdAt])
+  @@map("audit_logs")
+}

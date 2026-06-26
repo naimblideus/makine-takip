@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireSuperAdmin } from '@/lib/auth'
+import { logAudit } from '@/lib/audit'
 import bcrypt from 'bcryptjs'
 
 export async function GET() {
@@ -76,6 +77,7 @@ export async function POST(req: NextRequest) {
             },
         })
 
+        await logAudit({ actorId: (session.user as any).id, actorEmail: (session.user as any).email, action: 'tenant.create', tenantId: tenant.id, entityType: 'Tenant', entityId: tenant.id, detail: name, ip: req.headers.get('x-forwarded-for') })
         return NextResponse.json({ tenant, message: 'İşletme oluşturuldu' }, { status: 201 })
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 })
@@ -123,6 +125,7 @@ export async function PUT(req: NextRequest) {
             }
         }
 
+        await logAudit({ actorId: (session.user as any).id, actorEmail: (session.user as any).email, action: 'tenant.update', tenantId: id, entityType: 'Tenant', entityId: id, detail: name || id, ip: req.headers.get('x-forwarded-for') })
         return NextResponse.json({ tenant, message: 'İşletme güncellendi' })
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 })
@@ -140,6 +143,7 @@ export async function DELETE(req: NextRequest) {
 
     try {
         await prisma.tenant.delete({ where: { id } })
+        await logAudit({ actorId: (session.user as any).id, actorEmail: (session.user as any).email, action: 'tenant.delete', tenantId: null, entityType: 'Tenant', entityId: id, detail: `Tenant silindi: ${id}`, ip: req.headers.get('x-forwarded-for') })
         return NextResponse.json({ success: true })
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 })

@@ -96,7 +96,7 @@ export default function BorsaPage() {
                                             <td><span style={{ padding: '0.15rem 0.5rem', borderRadius: 9999, fontSize: '0.68rem', fontWeight: 700, background: st.b, color: st.c }}>{st.t}</span></td>
                                             <td>
                                                 <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
-                                                    {phone && <a href={`https://wa.me/${intl}`} target="_blank" rel="noopener" style={{ color: '#25D366' }}><MessageCircle size={16} /></a>}
+                                                    {phone && <a href={`https://wa.me/${intl}`} target="_blank" rel="noopener" aria-label="WhatsApp ile iletişime geç" title="WhatsApp ile iletişime geç" style={{ color: '#25D366' }}><MessageCircle size={16} /></a>}
                                                     {l.status === 'YENI' && <button className="btn btn-sm btn-outline" onClick={() => setLeadStatus(l.id, 'ILETILDI')}>İletişime geçtim</button>}
                                                     {['ILETILDI', 'TEKLIF_VERILDI'].includes(l.status) && <button className="btn btn-sm btn-primary" onClick={() => setLeadStatus(l.id, 'KAPANDI')}><CheckCircle2 size={13} /> Kazandım</button>}
                                                 </div>

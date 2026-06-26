@@ -12,6 +12,13 @@ async function markInvoicePaid(payToken: string) {
     const total = Number(invoice.totalAmount) + Number(invoice.lateFee || 0)
     const remaining = Math.max(0, Math.round((total - paid) * 100) / 100)
     await prisma.$transaction(async (tx) => {
+        // Atomik compare-and-set: yalnızca HENÜZ ödenmemiş fatura ODENDI'ye geçirilir.
+        // Eşzamanlı/tekrarlı callback'lerde tek çağrı count=1 alır, diğerleri 0 → çift Payment yok.
+        const flipped = await tx.invoice.updateMany({
+            where: { id: invoice.id, status: { not: 'ODENDI' } },
+            data: { status: 'ODENDI', providerStatus: 'ODENDI' },
+        })
+        if (flipped.count === 0) return // başka bir callback zaten kapattı → idempotent çıkış
         if (remaining > 0.01) {
             await tx.payment.create({
                 data: {
@@ -22,7 +29,6 @@ async function markInvoicePaid(payToken: string) {
                 },
             })
         }
-        await tx.invoice.update({ where: { id: invoice.id }, data: { status: 'ODENDI', providerStatus: 'ODENDI' } })
     })
 }
 

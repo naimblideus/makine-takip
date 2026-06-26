@@ -157,6 +157,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     </div>
                     <button
                         onClick={onClose}
+                        aria-label="Menüyü kapat"
                         style={{ color: 'rgba(255,255,255,0.6)', background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto', display: 'none' }}
                         className="mobile-close-btn"
                     >
